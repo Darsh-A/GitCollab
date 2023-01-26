@@ -33,13 +33,16 @@ export default class gitCollab extends Plugin {
 
     settings: gitCollabSettings;
 
+    workspace: any;
+
+
     async onload() {
 
         console.log('Git-Collab Loaded!!! ^^');
 
         //Load settings
         await this.loadSettings();
-        this.addSettingTab(new SampleSettingTab(this.app, this));
+        this.addSettingTab(new gitCollabSettingTab(this.app, this));
 
         //Add status bar item
         const statusBarItemEl = this.addStatusBarItem()
@@ -94,7 +97,7 @@ export default class gitCollab extends Plugin {
             //If there are commits under the time interval
             if (commits.length != 0) {
 
-                let filenames = []
+                let filenames : string[] = []
                 let files = []
 
                 for (let i = 0; i < commits.length; i++) {
@@ -125,12 +128,32 @@ export default class gitCollab extends Plugin {
                             }
                             new Notice(this.settings.notice1)
                         }
-                        // if (this.settings.fileOwners == true) {
-                        //     return
-                        // }
+
+                        if (this.settings.fileOwners == true) {
+                            this.registerEvent(this.app.workspace.on("file-open", () => {
+                                if (activeFile) {
+                                    this.addCommand({
+                                        id: 'make-file-readonly',
+                                        name: 'Make File Readonly',
+                                        callback: () => {
+                                            if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
+                                                if (!filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
+                                                    // @ts-ignore: Object is possibly 'null'.
+                                                    this.app.workspace.getActiveViewOfType(MarkdownView).setReadOnly(true);
+                                                }
+                                                // @ts-ignore: Object is possibly 'null'.
+                                                this.app.workspace.getActiveViewOfType(MarkdownView).setReadOnly(false);
+                                            }
+                                            else {
+                                                new Notice('You are not currently working on this file :(');
+                                            }
+                                        }
+                                    });
+                                }
+                            }));
+                        }
                     }
                 }
-
             }
             else {
                 statusBarItemEl.setText('❌ No Files')
@@ -155,7 +178,7 @@ export default class gitCollab extends Plugin {
 
 //Settings Tab
 
-class SampleSettingTab extends PluginSettingTab {
+class gitCollabSettingTab extends PluginSettingTab {
     plugin: gitCollab;
 
     constructor(app: App, plugin: gitCollab) {
@@ -168,7 +191,7 @@ class SampleSettingTab extends PluginSettingTab {
 
         containerEl.empty();;
 
-        containerEl.createEl('h1', { text: 'Settings for Git-Check! :3.' });
+        containerEl.createEl('h1', { text: 'Settings for Git-Collab! :3.' });
 
         new Setting(containerEl)
             .setName('Github Personal Access Token')
