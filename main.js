@@ -9196,7 +9196,7 @@ var gitCollab = class extends import_obsidian.Plugin {
   async onload() {
     console.log("Git-Collab Loaded!!! ^^");
     await this.loadSettings();
-    this.addSettingTab(new SampleSettingTab(this.app, this));
+    this.addSettingTab(new gitCollabSettingTab(this.app, this));
     const statusBarItemEl = this.addStatusBarItem();
     statusBarItemEl.setText("Loading...");
     const octokit = new Octokit({
@@ -9211,6 +9211,7 @@ var gitCollab = class extends import_obsidian.Plugin {
       console.log("cron launched");
       const time_rn = new Date();
       const time_bf = new Date(time_rn.getTime() - 2 * 6e4);
+      const time_day = new Date(time_rn.getTime() - 24 * 60 * 6e4);
       const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
         owner: this.settings.owner,
         repo: this.settings.repo,
@@ -9231,7 +9232,9 @@ var gitCollab = class extends import_obsidian.Plugin {
           ref: "main",
           sha: sha[i2]
         });
-        commits.push(response2.data);
+        if (response2.data.commit.message.includes("vault backup")) {
+          commits.push(response2.data);
+        }
       }
       if (commits.length != 0) {
         let filenames = [];
@@ -9256,6 +9259,18 @@ var gitCollab = class extends import_obsidian.Plugin {
               }
               new import_obsidian.Notice(this.settings.notice1);
             }
+            if (this.settings.fileOwners == true) {
+              this.registerEvent(this.app.workspace.on("file-open", () => {
+                if (activeFile) {
+                  this.addCommand({
+                    id: "make-file-readonly",
+                    name: "Make File Readonly",
+                    callback: () => {
+                    }
+                  });
+                }
+              }));
+            }
           }
         }
       } else {
@@ -9268,59 +9283,19 @@ var gitCollab = class extends import_obsidian.Plugin {
     console.log("unloading plugin");
   }
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    let data = await this.loadData();
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
   }
   async saveSettings() {
     await this.saveData(this.settings);
   }
 };
-var SampleSettingTab = class extends import_obsidian.PluginSettingTab {
+var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
   display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    ;
-    containerEl.createEl("h1", { text: "Settings for Git-Check! :3." });
-    new import_obsidian.Setting(containerEl).setName("Github Personal Access Token").setDesc("Do not commit the .obsidian/plugin/Git-Check/main.js file to Github").addText((text) => text.setValue(this.plugin.settings.token).onChange(async (value) => {
-      this.plugin.settings.token = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(containerEl).setName("Repository Owner").setDesc("Github repository Owner Username").addText((text) => text.setValue(this.plugin.settings.owner).onChange(async (value) => {
-      this.plugin.settings.owner = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(containerEl).setName("Repository Name").setDesc("Github repository name").addText((text) => text.setValue(this.plugin.settings.repo).onChange(async (value) => {
-      this.plugin.settings.repo = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(containerEl).setName("Notices!").setDesc("Give Notice for active files").addToggle((toggle) => toggle.setValue(this.plugin.settings.notice).onChange(async (value) => {
-      this.plugin.settings.notice = value;
-      await this.plugin.saveSettings();
-    }));
-    containerEl.createEl("h2", { text: "Notices Settings." });
-    if (this.plugin.settings.notice == true) {
-      new import_obsidian.Setting(containerEl).setName("Notice Message").setDesc("Default: This file is being edited by someone else").addText((text) => text.setValue(this.plugin.settings.notice1).onChange(async (value) => {
-        this.plugin.settings.notice1 = value;
-        await this.plugin.saveSettings();
-      }));
-      new import_obsidian.Setting(containerEl).setName('Enter "your" Github Username').setDesc("So that you dont get a notice for your own edits").addText((text) => text.setValue(this.plugin.settings.username).onChange(async (value) => {
-        this.plugin.settings.username = value;
-        await this.plugin.saveSettings();
-      }));
-      new import_obsidian.Setting(containerEl).setName("Enable Ownerships").setDesc("set owners of certain folders who grant access to edit those files").addToggle((toggle) => toggle.setValue(this.plugin.settings.fileOwners).onChange(async (value) => {
-        this.plugin.settings.fileOwners = value;
-        await this.plugin.saveSettings();
-      }));
-      if (this.plugin.settings.fileOwners == true) {
-        new import_obsidian.Setting(containerEl).setName("Owners").setDesc('Enter the owners of the files in the format "owner:foldername" and seperate them by a comma. Example: "owner1:folder1,owner2:folder2"').addTextArea((text) => text.setValue(this.plugin.settings.nameOwners).onChange(async (value) => {
-          this.plugin.settings.nameOwners = value;
-          await this.plugin.saveSettings();
-        }));
-      }
-    }
   }
 };
 /*!

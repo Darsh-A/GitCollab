@@ -65,6 +65,7 @@ export default class gitCollab extends Plugin {
 
             const time_rn = new Date()
             const time_bf = new Date(time_rn.getTime() - 2 * 60000)
+            const time_day = new Date(time_rn.getTime() - 24 * 60 * 60000)
 
             const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
                 owner: this.settings.owner,
@@ -74,11 +75,23 @@ export default class gitCollab extends Plugin {
                 per_page: 100,
                 page: 1,
             });
+            // const response_day = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
+            //     owner: this.settings.owner,
+            //     repo: this.settings.repo,
+            //     since: time_day.toISOString(),
+            //     until: time_rn.toISOString(),
+            //     per_page: 100,
+            //     page: 1,
+            // });
 
             let sha = []
             for (let i = 0; i < response.data.length; i++) {
                 sha.push(response.data[i].sha)
             }
+            // let sha_day = []
+            // for (let i = 0; i < response_day.data.length; i++) {
+            //     sha_day.push(response_day.data[i].sha)
+            // }
 
             //get all commits under the time interval
             let commits = []
@@ -91,8 +104,35 @@ export default class gitCollab extends Plugin {
                     sha: sha[i]
                 })
 
-                commits.push(response2.data)
+                if (response2.data.commit.message.includes('vault backup')) {
+                    commits.push(response2.data)
+                }
             }
+
+            // let commits_day = []
+            // for (let i = 0; i < sha.length; i++) {
+
+            //     const response2 = await octokit.request("GET /repos/{owner}/{repo}/commits/{ref}{?sha}", {
+            //         owner: this.settings.owner,
+            //         repo: this.settings.repo,
+            //         ref: 'main',
+            //         sha: sha[i]
+            //     })
+
+            //     commits_day.push(response2.data)
+            // }
+
+            // if (commits_day.length != 0) {
+            //     let filenames : string[] = []
+
+            //     for (let i = 0; i < commits_day.length; i++) {
+                        
+            //             for (let j = 0; j < commits_day[i].files.length; j++) {
+            //                 filenames.indexOf(`${commits_day[i].commit.author.name} - ${commits_day[i].files[j].filename}`) == -1 ? filenames.push(`${commits_day[i].commit.author.name} - ${commits_day[i].files[j].filename}`) : null
+            //             }
+            //         }
+
+            // }
 
             //If there are commits under the time interval
             if (commits.length != 0) {
@@ -136,17 +176,8 @@ export default class gitCollab extends Plugin {
                                         id: 'make-file-readonly',
                                         name: 'Make File Readonly',
                                         callback: () => {
-                                            if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                                                if (!filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                                                    // @ts-ignore: Object is possibly 'null'.
-                                                    this.app.workspace.getActiveViewOfType(MarkdownView).setReadOnly(true);
-                                                }
-                                                // @ts-ignore: Object is possibly 'null'.
-                                                this.app.workspace.getActiveViewOfType(MarkdownView).setReadOnly(false);
-                                            }
-                                            else {
-                                                new Notice('You are not currently working on this file :(');
-                                            }
+
+
                                         }
                                     });
                                 }
