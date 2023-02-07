@@ -9,6 +9,8 @@ interface gitCollabSettings {
     owner: string;
     repo: string;
     notice: boolean;
+    status: boolean;
+    emotes: boolean;
     notice1: string;
     username: string;
     fileOwners: boolean;
@@ -23,6 +25,8 @@ const DEFAULT_SETTINGS: gitCollabSettings = {
     owner: '',
     repo: '',
     notice: false,
+    status: false,
+    emotes: false,
     notice1: 'File has been edited recently!!!\nCheck the status bar uwu',
     username: '',
     fileOwners: false,
@@ -44,9 +48,12 @@ export default class gitCollab extends Plugin {
         await this.loadSettings();
         this.addSettingTab(new gitCollabSettingTab(this.app, this));
 
-        //Add status bar item
         const statusBarItemEl = this.addStatusBarItem()
-        statusBarItemEl.setText('Loading...')
+
+        //Add status bar item
+        if (this.settings.status == true) {
+            statusBarItemEl.setText('Loading...')
+        }
 
         //Github Authentication
         const octokit = new Octokit({
@@ -75,25 +82,13 @@ export default class gitCollab extends Plugin {
                 per_page: 100,
                 page: 1,
             });
-            // const response_day = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
-            //     owner: this.settings.owner,
-            //     repo: this.settings.repo,
-            //     since: time_day.toISOString(),
-            //     until: time_rn.toISOString(),
-            //     per_page: 100,
-            //     page: 1,
-            // });
+
 
             let sha = []
             for (let i = 0; i < response.data.length; i++) {
                 sha.push(response.data[i].sha)
             }
-            // let sha_day = []
-            // for (let i = 0; i < response_day.data.length; i++) {
-            //     sha_day.push(response_day.data[i].sha)
-            // }
 
-            //get all commits under the time interval
             let commits = []
             for (let i = 0; i < sha.length; i++) {
 
@@ -109,35 +104,10 @@ export default class gitCollab extends Plugin {
                 }
             }
 
-            // let commits_day = []
-            // for (let i = 0; i < sha.length; i++) {
-
-            //     const response2 = await octokit.request("GET /repos/{owner}/{repo}/commits/{ref}{?sha}", {
-            //         owner: this.settings.owner,
-            //         repo: this.settings.repo,
-            //         ref: 'main',
-            //         sha: sha[i]
-            //     })
-
-            //     commits_day.push(response2.data)
-            // }
-
-            // if (commits_day.length != 0) {
-            //     let filenames : string[] = []
-
-            //     for (let i = 0; i < commits_day.length; i++) {
-                        
-            //             for (let j = 0; j < commits_day[i].files.length; j++) {
-            //                 filenames.indexOf(`${commits_day[i].commit.author.name} - ${commits_day[i].files[j].filename}`) == -1 ? filenames.push(`${commits_day[i].commit.author.name} - ${commits_day[i].files[j].filename}`) : null
-            //             }
-            //         }
-
-            // }
-
             //If there are commits under the time interval
             if (commits.length != 0) {
 
-                let filenames : string[] = []
+                let filenames: string[] = []
                 let files = []
 
                 for (let i = 0; i < commits.length; i++) {
@@ -148,18 +118,46 @@ export default class gitCollab extends Plugin {
                     }
                 }
 
-                statusBarItemEl.setText('✅ Files are Active')
-                statusBarItemEl.ariaLabel = filenames.join('\n')
+                //Status Bar!!
+                if (this.settings.status == true) {
+                    statusBarItemEl.setText('✅ Files are Active')
+                    statusBarItemEl.ariaLabel = filenames.join('\n')
+                }
 
-                const activeFile = this.app.workspace.getActiveFile()
-
-                if (this.settings.notice == true) {
-
+                //Emotes!!
+                if (this.settings.emotes == true) {
+                    //add a emote in front of the active file and change back when its inactive
+                    const activeFile = this.app.workspace.getActiveFile()
                     if (activeFile) {
                         const activeFilePath = activeFile.path
-
                         if (files.includes(activeFilePath)) {
+                            //if username is in files 
+                            if (this.settings.username != '') {
+                                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
+                                    return
+                                }
+                            }
+                            //change file name
+                            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView)
+                            if (activeView) {
+                                activeView.file.name = `🍁 ${activeView.file.name}`
+                            }
+                        }   //revert when file becomes inactive
+                        else {
+                            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView)
+                            if (activeView) {
+                                activeView.file.name = activeView.file.name.replace('🍁 ', '')
+                            }
+                        }
+                    }
+                }
 
+                //Notices!!
+                const activeFile = this.app.workspace.getActiveFile()
+                if (this.settings.notice == true) {
+                    if (activeFile) {
+                        const activeFilePath = activeFile.path
+                        if (files.includes(activeFilePath)) {
                             //if username is in files 
                             if (this.settings.username != '') {
                                 if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
@@ -169,26 +167,29 @@ export default class gitCollab extends Plugin {
                             new Notice(this.settings.notice1)
                         }
 
-                        if (this.settings.fileOwners == true) {
-                            this.registerEvent(this.app.workspace.on("file-open", () => {
-                                if (activeFile) {
-                                    this.addCommand({
-                                        id: 'make-file-readonly',
-                                        name: 'Make File Readonly',
-                                        callback: () => {
+                        // if (this.settings.fileOwners == true) {
+                        //     this.registerEvent(this.app.workspace.on("file-open", () => {
+                        //         if (activeFile) {
+                        //             this.addCommand({
+                        //                 id: 'make-file-readonly',
+                        //                 name: 'Make File Readonly',
+                        //                 callback: () => {
 
 
-                                        }
-                                    });
-                                }
-                            }));
-                        }
+                        //                 }
+                        //             });
+                        //         }
+                        //     }));
+                        // }
                     }
                 }
             }
             else {
-                statusBarItemEl.setText('❌ No Files')
-                statusBarItemEl.ariaLabel = '^^'
+
+                if (this.settings.status == true) {
+                    statusBarItemEl.setText('❌ No Files')
+                    statusBarItemEl.ariaLabel = '^^'
+                }
             }
         })
     }
@@ -224,6 +225,11 @@ class gitCollabSettingTab extends PluginSettingTab {
 
         containerEl.createEl('h1', { text: 'Settings for Git-Collab! :3.' });
 
+        if (this.plugin.settings.status == false && this.plugin.settings.notice == false) {
+            containerEl.createEl('h3', { text: 'Please enable the status bar and/or the notice' })
+        }
+
+        //Required Settings
         new Setting(containerEl)
             .setName('Github Personal Access Token')
             .setDesc('Do not commit the .obsidian/plugin/Git-Check/main.js file to Github')
@@ -255,6 +261,22 @@ class gitCollabSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }
                 ));
+
+        //Optional Settings
+
+        //Filename
+        new Setting(containerEl)
+            .setName('Active File Emotes')
+            .setDesc('Show Emotes for active files')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.emotes)
+                .onChange(async (value) => {
+                    this.plugin.settings.emotes = value;
+                    await this.plugin.saveSettings();
+                })
+            );
+
+        //Notice when someone opens the active file
         new Setting(containerEl)
             .setName('Notices!')
             .setDesc('Give Notice for active files')
@@ -266,12 +288,23 @@ class gitCollabSettingTab extends PluginSettingTab {
                 })
 
             );
+        //add status to the status bar
+        new Setting(containerEl)
+            .setName('Status Bar')
+            .setDesc('Show Status of active files in the status bar')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.status)
+                .onChange(async (value) => {
+                    this.plugin.settings.status = value;
+                    await this.plugin.saveSettings();
+                })
+
+            );
 
 
         containerEl.createEl('h2', { text: 'Notices Settings.' });
 
         if (this.plugin.settings.notice == true) {
-
             new Setting(containerEl)
                 .setName('Notice Message')
                 .setDesc('Default: This file is being edited by someone else')
