@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-git-collab",
+	"name": "obsidian-Gitapi",
 	"version": "1.0.0",
-	"description": "Collaborate on Obsidian vaults using Git",
+	"description": "Kshitosh sucks balls",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
@@ -25,6 +25,7 @@
 		"typescript": "^4.7.4"
 	},
 	"dependencies": {
+		"cron": "^2.2.0",
 		"node-cron": "^3.0.2"
 	}
 }
