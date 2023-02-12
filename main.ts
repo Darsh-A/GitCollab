@@ -3,30 +3,32 @@ import { Octokit } from 'octokit';
 var cron = require('node-cron');
 
 interface gitCollabSettings {
-    // interval: string;
-    // check: string;
+    checkInterval: number;
+    checkTime: number;
     token: string;
     owner: string;
     repo: string;
     notice: boolean;
-    notice1: string;
+    noticePrompt: string;
     username: string;
     fileOwners: boolean;
     nameOwners: string;
+    debugMode: boolean;
 
 }
 
 const DEFAULT_SETTINGS: gitCollabSettings = {
-    // interval: '',
-    // check: '',
+    checkInterval: 15,
+    checkTime: 2,
     token: '',
     owner: '',
     repo: '',
     notice: false,
-    notice1: 'File has been edited recently!!!\nCheck the status bar uwu',
+    noticePrompt: 'This file is being edited by someone else',
     username: '',
     fileOwners: false,
     nameOwners: '',
+    debugMode: false,
 }
 
 export default class gitCollab extends Plugin {
@@ -35,7 +37,7 @@ export default class gitCollab extends Plugin {
 
     async onload() {
 
-        console.log('Git-Collab Loaded!!! ^^');
+        console.log('Git-Collab Loaded!!!');
 
         //Load settings
         await this.loadSettings();
@@ -43,7 +45,7 @@ export default class gitCollab extends Plugin {
 
         //Add status bar item
         const statusBarItemEl = this.addStatusBarItem()
-        statusBarItemEl.setText('Loading...')
+        statusBarItemEl.setText('Loading Git-Collab.')
 
         //Github Authentication
         const octokit = new Octokit({
@@ -52,16 +54,26 @@ export default class gitCollab extends Plugin {
 
         //Check if the settings are set
         if (this.settings.token == '' || this.settings.owner == '' || this.settings.repo == '') {
-            statusBarItemEl.setText('❌ Settings not set')
-            statusBarItemEl.ariaLabel = '^^'
+            statusBarItemEl.setText('❌ Settings not set.')
+            statusBarItemEl.ariaLabel = 'Please check git collab settings tab.'
             return
         }
-        //cron job
-        cron.schedule(`*/15 * * * * *`, async () => {
-            console.log('cron launched')
 
-            const time_rn = new Date()
-            const time_bf = new Date(time_rn.getTime() - 2 * 60000)
+        const cronJob: String = `*/${this.settings.checkInterval} * * * * *`
+
+        //cron job
+        cron.schedule(cronJob, async () => {
+
+            if (this.settings.debugMode){
+                console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
+            }
+
+            const time_rn= new Date()
+            const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 60000)
+
+            if (this.settings.debugMode){
+                console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
+            }
 
             const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
                 owner: this.settings.owner,
@@ -77,7 +89,6 @@ export default class gitCollab extends Plugin {
                 sha.push(response.data[i].sha)
             }
 
-            //get all commits under the time interval
             let commits = []
             for (let i = 0; i < sha.length; i++) {
 
@@ -123,24 +134,23 @@ export default class gitCollab extends Plugin {
                                     return
                                 }
                             }
-                            new Notice(this.settings.notice1)
+                            new Notice(this.settings.noticePrompt)
                         }
-                        // if (this.settings.fileOwners == true) {
-                        //     return
-                        // }
                     }
                 }
 
             }
             else {
                 statusBarItemEl.setText('❌ No Files')
-                statusBarItemEl.ariaLabel = '^^'
+                statusBarItemEl.ariaLabel = 'No files are being editted currently.'
             }
         })
     }
 
     onunload() {
-        console.log('unloading plugin');
+        if (this.settings.debugMode){
+            console.log('Git Collab: Unloading Plugin')
+        }
     }
 
     async loadSettings() {
@@ -166,9 +176,9 @@ class SampleSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
 
-        containerEl.empty();;
+        containerEl.empty();
 
-        containerEl.createEl('h1', { text: 'Settings for Git-Check! :3.' });
+        containerEl.createEl('h1', { text: 'Git Collab Settings' });
 
         new Setting(containerEl)
             .setName('Github Personal Access Token')
@@ -178,8 +188,7 @@ class SampleSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.token = value;
                     await this.plugin.saveSettings();
-                }
-                ));
+                }));
 
         new Setting(containerEl)
             .setName('Repository Owner')
@@ -189,8 +198,8 @@ class SampleSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.owner = value;
                     await this.plugin.saveSettings();
-                }
-                ));
+                }));
+
         new Setting(containerEl)
             .setName('Repository Name')
             .setDesc('Github repository name')
@@ -199,8 +208,8 @@ class SampleSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.repo = value;
                     await this.plugin.saveSettings();
-                }
-                ));
+                }));
+
         new Setting(containerEl)
             .setName('Notices!')
             .setDesc('Give Notice for active files')
@@ -209,10 +218,39 @@ class SampleSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.notice = value;
                     await this.plugin.saveSettings();
-                })
-
-            );
-
+                   }));
+        
+        new Setting(containerEl)
+            .setName('Debug Mode')
+            .setDesc('Print useful debugging messages to console.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.debugMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.debugMode = value;
+                    await this.plugin.saveSettings();
+                }));
+        
+                new Setting(containerEl)
+                .setName('Time Interval to Check for Activity (in mins)')
+                .setDesc('Default: 2 minutes')
+                .addText(text => text
+                    .setPlaceholder('2')
+                    .setValue(`${this.plugin.settings.checkTime}`)
+                    .onChange(async (value) => {
+                        this.plugin.settings.checkTime = Math.round(parseFloat(value));
+                        await this.plugin.saveSettings();
+                    }));
+            new Setting(containerEl)
+                .setName('Time between each check (in seconds)')
+                .setDesc('Default: 15 seconds')
+                .addText(text => text
+                    .setPlaceholder('15')
+                    .setValue(`${this.plugin.settings.checkInterval}`)
+                    .onChange(async (value) => {
+                        this.plugin.settings.checkInterval = Math.round(parseFloat(value));
+                        await this.plugin.saveSettings();
+                    }
+                    ));
 
         containerEl.createEl('h2', { text: 'Notices Settings.' });
 
@@ -222,9 +260,9 @@ class SampleSettingTab extends PluginSettingTab {
                 .setName('Notice Message')
                 .setDesc('Default: This file is being edited by someone else')
                 .addText(text => text
-                    .setValue(this.plugin.settings.notice1)
+                    .setValue(this.plugin.settings.noticePrompt)
                     .onChange(async (value) => {
-                        this.plugin.settings.notice1 = value;
+                        this.plugin.settings.noticePrompt = value;
                         await this.plugin.saveSettings();
                     }
                     ));
@@ -242,7 +280,7 @@ class SampleSettingTab extends PluginSettingTab {
 
             new Setting(containerEl)
                 .setName('Enable Ownerships')
-                .setDesc('set owners of certain folders who grant access to edit those files')
+                .setDesc('Set owners of certain folders who grant access to edit those files')
                 .addToggle(toggle => toggle
                     .setValue(this.plugin.settings.fileOwners)
                     .onChange(async (value) => {
@@ -265,27 +303,6 @@ class SampleSettingTab extends PluginSettingTab {
                         ));
             }
         }
-        // new Setting(containerEl)
-        //     .setName('Time Interval to Check for Activity (in mins)')
-        //     .setDesc('Default: 2 minutes')
-        //     .addText(text => text
-        //         .setPlaceholder('2')
-        //         .setValue(this.plugin.settings.interval)
-        //         .onChange(async (value) => {
-        //             this.plugin.settings.interval = value;
-        //             await this.plugin.saveSettings();
-        //         }));
-        // new Setting(containerEl)
-        //     .setName('Time between each check (in seconds)')
-        //     .setDesc('Default: 15 seconds')
-        //     .addText(text => text
-        //         .setPlaceholder('15')
-        //         .setValue(this.plugin.settings.check)
-        //         .onChange(async (value) => {
-        //             this.plugin.settings.check = value;
-        //             await this.plugin.saveSettings();
-        //         }
-        //         ));
 
     }
 }

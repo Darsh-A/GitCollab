@@ -1,6 +1,6 @@
 {
-    "id": "gitapi-obsidian",
-    "name": "Git Api",
+    "id": "obsidian-git-collab",
+    "name": "Git Collab",
     "author": "Drosophilaa",
     "authorUrl": "https://github.com/Drosophilaa",
     "description": "Fetches the active notes uploaded to your Github repo.",
