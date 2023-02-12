@@ -3,11 +3,13 @@ import { Octokit } from 'octokit';
 var cron = require('node-cron');
 
 interface gitCollabSettings {
-    checkInterval: number;
-    checkTime: number;
+
     token: string;
     owner: string;
     repo: string;
+    checkInterval: number;
+    checkTime: number;
+
     notice: boolean;
     status: boolean;
     emotes: boolean;
@@ -15,8 +17,10 @@ interface gitCollabSettings {
     username: string;
     fileOwners: boolean;
     nameOwners: string;
-    debugMode: boolean;
 
+    debugMode: boolean;
+    cronDebugLogger: boolean;
+    commitDebugLogger: boolean;
 }
 
 const DEFAULT_SETTINGS: gitCollabSettings = {
@@ -25,14 +29,19 @@ const DEFAULT_SETTINGS: gitCollabSettings = {
     token: '',
     owner: '',
     repo: '',
+
     notice: false,
     status: false,
     emotes: false,
-    noticePrompt: 'File has been edited recently!!!\nCheck the status bar uwu',
+    noticePrompt: 'File has been edited recently!!!\nCheck the status bar.',
     username: '',
     fileOwners: false,
     nameOwners: '',
+
     debugMode: false,
+    cronDebugLogger: false,
+    commitDebugLogger: false,
+
 }
 
 export default class gitCollab extends Plugin {
@@ -64,7 +73,7 @@ export default class gitCollab extends Plugin {
 
         //Check if the settings are set
         if (this.settings.token == '' || this.settings.owner == '' || this.settings.repo == '') {
-            statusBarItemEl.setText('❌ Settings not set.')
+            statusBarItemEl.setText('❌ Settings not set')
             statusBarItemEl.ariaLabel = 'Please check git collab settings tab.'
             return
         }
@@ -74,14 +83,14 @@ export default class gitCollab extends Plugin {
         //cron job
         cron.schedule(cronJob, async () => {
 
-            if (this.settings.debugMode){
+            if (this.settings.debugMode && this.settings.cronDebugLogger){
                 console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
             }
 
             const time_rn= new Date()
             const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 60000)
 
-            if (this.settings.debugMode){
+            if (this.settings.debugMode && this.settings.cronDebugLogger){
                 console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
             }
 
@@ -111,7 +120,12 @@ export default class gitCollab extends Plugin {
                 })
 
                 if (response2.data.commit.message.includes('vault backup')) {
-                    commits.push(response2.data)
+                    commits.push(response2.data);
+
+                    if (this.settings.commitDebugLogger){
+                        console.log(`Git Collab: Commit added \n${response2.data.commit.message}`)
+                    }
+
                 }
             }
 
@@ -206,9 +220,7 @@ export default class gitCollab extends Plugin {
     }
 
     onunload() {
-        if (this.settings.debugMode){
             console.log('Git Collab: Unloading Plugin')
-        }
     }
 
     async loadSettings() {
@@ -237,7 +249,7 @@ class gitCollabSettingTab extends PluginSettingTab {
 
         containerEl.empty();
 
-        containerEl.createEl('h1', { text: 'Settings for Git-Collab! :3.' });
+        containerEl.createEl('h1', { text: 'Settings for Git-Collab' });
 
         if (this.plugin.settings.status == false && this.plugin.settings.notice == false) {
             containerEl.createEl('h3', { text: 'Please enable the status bar and/or the notice' })
@@ -274,6 +286,27 @@ class gitCollabSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }
                 ));
+        
+        new Setting(containerEl)
+                .setName('Time Interval to Check for Activity (in mins)')
+                .setDesc('Default: 2 minutes')
+                .addText(text => text
+                    .setPlaceholder('2')
+                    .setValue(`${this.plugin.settings.checkTime}`)
+                    .onChange(async (value) => {
+                        this.plugin.settings.checkTime = Math.round(parseFloat(value));
+                        await this.plugin.saveSettings();
+        }));
+        new Setting(containerEl)
+            .setName('Time between each check (in seconds)')
+            .setDesc('Default: 15 seconds')
+            .addText(text => text
+                .setPlaceholder('15')
+                .setValue(`${this.plugin.settings.checkInterval}`)
+                .onChange(async (value) => {
+                    this.plugin.settings.checkInterval = Math.round(parseFloat(value));
+                    await this.plugin.saveSettings();
+        }));
 
         //Optional Settings
 
@@ -286,8 +319,7 @@ class gitCollabSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.emotes = value;
                     await this.plugin.saveSettings();
-                })
-            );
+        }));
 
         //Notice when someone opens the active file
         new Setting(containerEl)
@@ -298,39 +330,9 @@ class gitCollabSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.notice = value;
                     await this.plugin.saveSettings();
-                   }));
-        
-        new Setting(containerEl)
-            .setName('Debug Mode')
-            .setDesc('Print useful debugging messages to console.')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.debugMode)
-                .onChange(async (value) => {
-                    this.plugin.settings.debugMode = value;
-                    await this.plugin.saveSettings();
-                }));
-        
-                new Setting(containerEl)
-                .setName('Time Interval to Check for Activity (in mins)')
-                .setDesc('Default: 2 minutes')
-                .addText(text => text
-                    .setPlaceholder('2')
-                    .setValue(`${this.plugin.settings.checkTime}`)
-                    .onChange(async (value) => {
-                        this.plugin.settings.checkTime = Math.round(parseFloat(value));
-                        await this.plugin.saveSettings();
-                    }));
-            new Setting(containerEl)
-                .setName('Time between each check (in seconds)')
-                .setDesc('Default: 15 seconds')
-                .addText(text => text
-                    .setPlaceholder('15')
-                    .setValue(`${this.plugin.settings.checkInterval}`)
-                    .onChange(async (value) => {
-                        this.plugin.settings.checkInterval = Math.round(parseFloat(value));
-                        await this.plugin.saveSettings();
-                    }
-                    ));
+                    this.display();
+        }));
+
         //add status to the status bar
             new Setting(containerEl)
                 .setName('Status Bar')
@@ -340,14 +342,24 @@ class gitCollabSettingTab extends PluginSettingTab {
                     .onChange(async (value) => {
                         this.plugin.settings.status = value;
                         await this.plugin.saveSettings();
-                    })
-
-                );
-
-
-        containerEl.createEl('h2', { text: 'Notices Settings.' });
+                        this.display();
+            }));
+        
+            new Setting(containerEl)
+                .setName('Debug Mode')
+                .setDesc('Print useful debugging messages to console.')
+                .addToggle(toggle => toggle
+                    .setValue(this.plugin.settings.debugMode)
+                    .onChange(async (value) => {
+                        this.plugin.settings.debugMode = value;
+                        await this.plugin.saveSettings();
+                        this.display();
+                    }));
 
         if (this.plugin.settings.notice == true) {
+
+            containerEl.createEl('h2', { text: 'Notices Settings' });
+
             new Setting(containerEl)
                 .setName('Notice Message')
                 .setDesc('Default: This file is being edited by someone else')
@@ -378,6 +390,7 @@ class gitCollabSettingTab extends PluginSettingTab {
                     .onChange(async (value) => {
                         this.plugin.settings.fileOwners = value;
                         await this.plugin.saveSettings();
+                        this.display();
                     }
                     ));
 
@@ -394,6 +407,31 @@ class gitCollabSettingTab extends PluginSettingTab {
                         }
                         ));
             }
+        }
+
+        if (this.plugin.settings.debugMode) {
+
+            containerEl.createEl('h4', { text: 'Debug Settings' });
+
+            new Setting(containerEl)
+                .setName('Cron Timer Debug')
+                .setDesc('Log Cron Task Running Timer')
+                .addToggle(toggle => toggle
+                    .setValue(this.plugin.settings.cronDebugLogger)
+                    .onChange(async (value) => {
+                        this.plugin.settings.cronDebugLogger = value;
+                        await this.plugin.saveSettings();
+                    }));
+            
+            new Setting(containerEl)
+                .setName('Git Commit Debug')
+                .setDesc('Log Git Commit Messages')
+                .addToggle(toggle => toggle
+                    .setValue(this.plugin.settings.commitDebugLogger)
+                    .onChange(async (value) => {
+                        this.plugin.settings.commitDebugLogger = value;
+                        await this.plugin.saveSettings();
+                    }));
         }
 
     }
