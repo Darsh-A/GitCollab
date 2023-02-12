@@ -9189,13 +9189,9 @@ var DEFAULT_SETTINGS = {
   owner: "",
   repo: "",
   notice: false,
-<<<<<<< HEAD
-  noticePrompt: "This file is being edited by someone else",
-=======
   status: false,
   emotes: false,
-  notice1: "File has been edited recently!!!\nCheck the status bar uwu",
->>>>>>> 31080c9b4d240667c8b598505e8bc65156630138
+  noticePrompt: "File has been edited recently!!!\nCheck the status bar uwu",
   username: "",
   fileOwners: false,
   nameOwners: "",
@@ -9207,13 +9203,9 @@ var gitCollab = class extends import_obsidian.Plugin {
     await this.loadSettings();
     this.addSettingTab(new gitCollabSettingTab(this.app, this));
     const statusBarItemEl = this.addStatusBarItem();
-<<<<<<< HEAD
-    statusBarItemEl.setText("Loading Git-Collab.");
-=======
     if (this.settings.status == true) {
       statusBarItemEl.setText("Loading...");
     }
->>>>>>> 31080c9b4d240667c8b598505e8bc65156630138
     const octokit = new Octokit({
       auth: this.settings.token
     });
@@ -9228,15 +9220,10 @@ var gitCollab = class extends import_obsidian.Plugin {
         console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
       }
       const time_rn = new Date();
-<<<<<<< HEAD
       const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 6e4);
       if (this.settings.debugMode) {
         console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
       }
-=======
-      const time_bf = new Date(time_rn.getTime() - 2 * 6e4);
-      const time_day = new Date(time_rn.getTime() - 24 * 60 * 6e4);
->>>>>>> 31080c9b4d240667c8b598505e8bc65156630138
       const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
         owner: this.settings.owner,
         repo: this.settings.repo,
@@ -9311,15 +9298,10 @@ var gitCollab = class extends import_obsidian.Plugin {
           }
         }
       } else {
-<<<<<<< HEAD
-        statusBarItemEl.setText("\u274C No Files");
-        statusBarItemEl.ariaLabel = "No files are being editted currently.";
-=======
         if (this.settings.status == true) {
           statusBarItemEl.setText("\u274C No Files");
           statusBarItemEl.ariaLabel = "^^";
         }
->>>>>>> 31080c9b4d240667c8b598505e8bc65156630138
       }
     });
   }
@@ -9343,15 +9325,10 @@ var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-<<<<<<< HEAD
-    containerEl.createEl("h1", { text: "Git Collab Settings" });
-=======
-    ;
     containerEl.createEl("h1", { text: "Settings for Git-Collab! :3." });
     if (this.plugin.settings.status == false && this.plugin.settings.notice == false) {
       containerEl.createEl("h3", { text: "Please enable the status bar and/or the notice" });
     }
->>>>>>> 31080c9b4d240667c8b598505e8bc65156630138
     new import_obsidian.Setting(containerEl).setName("Github Personal Access Token").setDesc("Do not commit the .obsidian/plugin/Git-Check/main.js file to Github").addText((text) => text.setValue(this.plugin.settings.token).onChange(async (value) => {
       this.plugin.settings.token = value;
       await this.plugin.saveSettings();
@@ -9372,7 +9349,6 @@ var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
       this.plugin.settings.notice = value;
       await this.plugin.saveSettings();
     }));
-<<<<<<< HEAD
     new import_obsidian.Setting(containerEl).setName("Debug Mode").setDesc("Print useful debugging messages to console.").addToggle((toggle) => toggle.setValue(this.plugin.settings.debugMode).onChange(async (value) => {
       this.plugin.settings.debugMode = value;
       await this.plugin.saveSettings();
@@ -9383,10 +9359,10 @@ var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
     }));
     new import_obsidian.Setting(containerEl).setName("Time between each check (in seconds)").setDesc("Default: 15 seconds").addText((text) => text.setPlaceholder("15").setValue(`${this.plugin.settings.checkInterval}`).onChange(async (value) => {
       this.plugin.settings.checkInterval = Math.round(parseFloat(value));
-=======
+      await this.plugin.saveSettings();
+    }));
     new import_obsidian.Setting(containerEl).setName("Status Bar").setDesc("Show Status of active files in the status bar").addToggle((toggle) => toggle.setValue(this.plugin.settings.status).onChange(async (value) => {
       this.plugin.settings.status = value;
->>>>>>> 31080c9b4d240667c8b598505e8bc65156630138
       await this.plugin.saveSettings();
     }));
     containerEl.createEl("h2", { text: "Notices Settings." });
