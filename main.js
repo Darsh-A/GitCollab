@@ -5933,7 +5933,7 @@ var require_dist_node20 = __commonJS({
       }
       return options.onUnhandledRequest(request, response);
     }
-    var App3 = class {
+    var App4 = class {
       static defaults(defaults) {
         const AppWithDefaults = class extends this {
           constructor(...args) {
@@ -5994,8 +5994,8 @@ var require_dist_node20 = __commonJS({
         this.eachRepository = eachRepositoryFactory(this);
       }
     };
-    App3.VERSION = VERSION5;
-    exports.App = App3;
+    App4.VERSION = VERSION5;
+    exports.App = App4;
     exports.createNodeMiddleware = createNodeMiddleware;
   }
 });
@@ -7104,13 +7104,13 @@ var require_node_cron = __commonJS({
   }
 });
 
-// main.ts
+// src/main.ts
 var main_exports = {};
 __export(main_exports, {
   default: () => gitCollab
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian = require("obsidian");
+var import_obsidian2 = require("obsidian");
 
 // node_modules/octokit/dist-web/index.js
 var import_core = __toESM(require_dist_node8());
@@ -9180,147 +9180,8 @@ function onSecondaryRateLimit(retryAfter, options, octokit) {
 var App = import_app.App.defaults({ Octokit });
 var OAuthApp = import_oauth_app.OAuthApp.defaults({ Octokit });
 
-// main.ts
-var cron = require_node_cron();
-var DEFAULT_SETTINGS = {
-  checkInterval: 15,
-  checkTime: 2,
-  token: "",
-  owner: "",
-  repo: "",
-  notice: false,
-  status: false,
-  emotes: false,
-  noticePrompt: "File has been edited recently!!!\nCheck the status bar.",
-  username: "",
-  fileOwners: false,
-  nameOwners: "",
-  debugMode: false,
-  cronDebugLogger: false,
-  commitDebugLogger: false
-};
-var gitCollab = class extends import_obsidian.Plugin {
-  async onload() {
-    console.log("Git-Collab Loaded!!!");
-    await this.loadSettings();
-    this.addSettingTab(new gitCollabSettingTab(this.app, this));
-    const statusBarItemEl = this.addStatusBarItem();
-    if (this.settings.status == true) {
-      statusBarItemEl.setText("Loading...");
-    }
-    const octokit = new Octokit({
-      auth: this.settings.token
-    });
-    if (this.settings.token == "" || this.settings.owner == "" || this.settings.repo == "") {
-      statusBarItemEl.setText("\u274C Settings not set");
-      statusBarItemEl.ariaLabel = "Please check git collab settings tab.";
-      return;
-    }
-    const cronJob = `*/${this.settings.checkInterval} * * * * *`;
-    cron.schedule(cronJob, async () => {
-      if (this.settings.debugMode && this.settings.cronDebugLogger) {
-        console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
-      }
-      const time_rn = new Date();
-      const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 6e4);
-      if (this.settings.debugMode && this.settings.cronDebugLogger) {
-        console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
-      }
-      const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
-        owner: this.settings.owner,
-        repo: this.settings.repo,
-        since: time_bf.toISOString(),
-        until: time_rn.toISOString(),
-        per_page: 100,
-        page: 1
-      });
-      let sha = [];
-      for (let i2 = 0; i2 < response.data.length; i2++) {
-        sha.push(response.data[i2].sha);
-      }
-      let commits = [];
-      for (let i2 = 0; i2 < sha.length; i2++) {
-        const response2 = await octokit.request("GET /repos/{owner}/{repo}/commits/{ref}{?sha}", {
-          owner: this.settings.owner,
-          repo: this.settings.repo,
-          ref: "main",
-          sha: sha[i2]
-        });
-        if (response2.data.commit.message.includes("vault backup")) {
-          commits.push(response2.data);
-          if (this.settings.commitDebugLogger) {
-            console.log(`Git Collab: Commit added 
-${response2.data.commit.message}`);
-          }
-        }
-      }
-      if (commits.length != 0) {
-        let filenames = [];
-        let files = [];
-        for (let i2 = 0; i2 < commits.length; i2++) {
-          for (let j = 0; j < commits[i2].files.length; j++) {
-            filenames.indexOf(`${commits[i2].commit.author.name} - ${commits[i2].files[j].filename}`) == -1 ? filenames.push(`${commits[i2].commit.author.name} - ${commits[i2].files[j].filename}`) : null;
-            files.indexOf(commits[i2].files[j].filename) == -1 ? files.push(commits[i2].files[j].filename) : null;
-          }
-        }
-        if (this.settings.status == true) {
-          statusBarItemEl.setText("\u2705 Files are Active");
-          statusBarItemEl.ariaLabel = filenames.join("\n");
-        }
-        if (this.settings.emotes == true) {
-          const activeFile2 = this.app.workspace.getActiveFile();
-          if (activeFile2) {
-            const activeFilePath = activeFile2.path;
-            if (files.includes(activeFilePath)) {
-              if (this.settings.username != "") {
-                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                  return;
-                }
-              }
-              const activeView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-              if (activeView) {
-                activeView.file.name = `\u{1F341} ${activeView.file.name}`;
-              }
-            } else {
-              const activeView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-              if (activeView) {
-                activeView.file.name = activeView.file.name.replace("\u{1F341} ", "");
-              }
-            }
-          }
-        }
-        const activeFile = this.app.workspace.getActiveFile();
-        if (this.settings.notice == true) {
-          if (activeFile) {
-            const activeFilePath = activeFile.path;
-            if (files.includes(activeFilePath)) {
-              if (this.settings.username != "") {
-                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                  return;
-                }
-              }
-              new import_obsidian.Notice(this.settings.noticePrompt);
-            }
-          }
-        }
-      } else {
-        if (this.settings.status == true) {
-          statusBarItemEl.setText("\u274C No Files");
-          statusBarItemEl.ariaLabel = "^^";
-        }
-      }
-    });
-  }
-  onunload() {
-    console.log("Git Collab: Unloading Plugin");
-  }
-  async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
-  async saveSettings() {
-    await this.saveData(this.settings);
-  }
-};
+// src/settings.ts
+var import_obsidian = require("obsidian");
 var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
@@ -9405,6 +9266,148 @@ var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
         await this.plugin.saveSettings();
       }));
     }
+  }
+};
+
+// src/main.ts
+var cron = require_node_cron();
+var DEFAULT_SETTINGS = {
+  checkInterval: 15,
+  checkTime: 2,
+  token: "",
+  owner: "",
+  repo: "",
+  notice: false,
+  status: false,
+  emotes: false,
+  noticePrompt: "File has been edited recently!!!\nCheck the status bar.",
+  username: "",
+  fileOwners: false,
+  nameOwners: "",
+  debugMode: false,
+  cronDebugLogger: false,
+  commitDebugLogger: false
+};
+var gitCollab = class extends import_obsidian2.Plugin {
+  async onload() {
+    console.log("Git-Collab Loaded!!!");
+    await this.loadSettings();
+    this.addSettingTab(new gitCollabSettingTab(this.app, this));
+    const statusBarItemEl = this.addStatusBarItem();
+    if (this.settings.status == true) {
+      statusBarItemEl.setText("Loading...");
+    }
+    const octokit = new Octokit({
+      auth: this.settings.token
+    });
+    if (this.settings.token == "" || this.settings.owner == "" || this.settings.repo == "") {
+      statusBarItemEl.setText("\u274C Settings not set");
+      statusBarItemEl.ariaLabel = "Please check git collab settings tab.";
+      return;
+    }
+    const cronJob = `*/${this.settings.checkInterval} * * * * *`;
+    cron.schedule(cronJob, async () => {
+      if (this.settings.debugMode && this.settings.cronDebugLogger) {
+        console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
+      }
+      const time_rn = new Date();
+      const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 6e4);
+      if (this.settings.debugMode && this.settings.cronDebugLogger) {
+        console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
+      }
+      const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
+        owner: this.settings.owner,
+        repo: this.settings.repo,
+        since: time_bf.toISOString(),
+        until: time_rn.toISOString(),
+        per_page: 100,
+        page: 1
+      });
+      let sha = [];
+      for (let i2 = 0; i2 < response.data.length; i2++) {
+        sha.push(response.data[i2].sha);
+      }
+      let commits = [];
+      for (let i2 = 0; i2 < sha.length; i2++) {
+        const response2 = await octokit.request("GET /repos/{owner}/{repo}/commits/{ref}{?sha}", {
+          owner: this.settings.owner,
+          repo: this.settings.repo,
+          ref: "main",
+          sha: sha[i2]
+        });
+        if (response2.data.commit.message.includes("vault backup")) {
+          commits.push(response2.data);
+          if (this.settings.commitDebugLogger) {
+            console.log(`Git Collab: Commit added 
+${response2.data.commit.message}`);
+          }
+        }
+      }
+      if (commits.length != 0) {
+        let filenames = [];
+        let files = [];
+        for (let i2 = 0; i2 < commits.length; i2++) {
+          for (let j = 0; j < commits[i2].files.length; j++) {
+            filenames.indexOf(`${commits[i2].commit.author.name} - ${commits[i2].files[j].filename}`) == -1 ? filenames.push(`${commits[i2].commit.author.name} - ${commits[i2].files[j].filename}`) : null;
+            files.indexOf(commits[i2].files[j].filename) == -1 ? files.push(commits[i2].files[j].filename) : null;
+          }
+        }
+        if (this.settings.status == true) {
+          statusBarItemEl.setText("\u2705 Files are Active");
+          statusBarItemEl.ariaLabel = filenames.join("\n");
+        }
+        if (this.settings.emotes == true) {
+          const activeFile2 = this.app.workspace.getActiveFile();
+          if (activeFile2) {
+            const activeFilePath = activeFile2.path;
+            if (files.includes(activeFilePath)) {
+              if (this.settings.username != "") {
+                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
+                  return;
+                }
+              }
+              const activeView = this.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
+              if (activeView) {
+                activeView.file.name = `\u{1F341} ${activeView.file.name}`;
+              }
+            } else {
+              const activeView = this.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
+              if (activeView) {
+                activeView.file.name = activeView.file.name.replace("\u{1F341} ", "");
+              }
+            }
+          }
+        }
+        const activeFile = this.app.workspace.getActiveFile();
+        if (this.settings.notice == true) {
+          if (activeFile) {
+            const activeFilePath = activeFile.path;
+            if (files.includes(activeFilePath)) {
+              if (this.settings.username != "") {
+                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
+                  return;
+                }
+              }
+              new import_obsidian2.Notice(this.settings.noticePrompt);
+            }
+          }
+        }
+      } else {
+        if (this.settings.status == true) {
+          statusBarItemEl.setText("\u274C No Files");
+          statusBarItemEl.ariaLabel = "^^";
+        }
+      }
+    });
+  }
+  onunload() {
+    console.log("Git Collab: Unloading Plugin");
+  }
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+  async saveSettings() {
+    await this.saveData(this.settings);
   }
 };
 /*!

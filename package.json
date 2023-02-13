@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-Gitapi",
+	"name": "obsidian-git-collab",
 	"version": "1.0.0",
-	"description": "Kshitosh sucks balls",
+	"description": "Write notes in collaboration",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
