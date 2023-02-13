@@ -9253,28 +9253,6 @@ var gitCollab = class extends import_obsidian.Plugin {
           statusBarItemEl.setText("\u2705 Files are Active");
           statusBarItemEl.ariaLabel = filenames.join("\n");
         }
-        if (this.settings.emotes == true) {
-          const activeFile2 = this.app.workspace.getActiveFile();
-          if (activeFile2) {
-            const activeFilePath = activeFile2.path;
-            if (files.includes(activeFilePath)) {
-              if (this.settings.username != "") {
-                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                  return;
-                }
-              }
-              const activeView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-              if (activeView) {
-                activeView.file.name = `\u{1F341} ${activeView.file.name}`;
-              }
-            } else {
-              const activeView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-              if (activeView) {
-                activeView.file.name = activeView.file.name.replace("\u{1F341} ", "");
-              }
-            }
-          }
-        }
         const activeFile = this.app.workspace.getActiveFile();
         if (this.settings.notice == true) {
           if (activeFile) {

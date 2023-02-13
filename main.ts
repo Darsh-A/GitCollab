@@ -124,33 +124,26 @@ export default class gitCollab extends Plugin {
                     statusBarItemEl.ariaLabel = filenames.join('\n')
                 }
 
-                //Emotes!!
-                if (this.settings.emotes == true) {
-                    //add a emote in front of the active file and change back when its inactive
-                    const activeFile = this.app.workspace.getActiveFile()
-                    if (activeFile) {
-                        const activeFilePath = activeFile.path
-                        if (files.includes(activeFilePath)) {
-                            //if username is in files 
-                            if (this.settings.username != '') {
-                                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                                    return
-                                }
-                            }
-                            //change file name
-                            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView)
-                            if (activeView) {
-                                activeView.file.name = `🍁 ${activeView.file.name}`
-                            }
-                        }   //revert when file becomes inactive
-                        else {
-                            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView)
-                            if (activeView) {
-                                activeView.file.name = activeView.file.name.replace('🍁 ', '')
-                            }
-                        }
-                    }
-                }
+                // //Emotes!!
+                // if (this.settings.emotes == true) {
+                //     //rename the files in the vault to include a emote in front of the file name
+                //     for (let i = 0; i < files.length; i++) {
+                //         const activeFile = this.app.vault.getAbstractFileByPath(files[i])
+                //         if (activeFile) {
+                        
+
+                //             this.app.vault.rename(activeFile, `${files[i]}🍁`)
+                //         }
+                //     }
+                //     //remove the emote when the file is not active
+                //     const filesInVault = this.app.vault.getFiles()
+                //     for (let i = 0; i < filesInVault.length; i++) {
+                //         if (files.includes(filesInVault[i].path) == false) {
+                //             this.app.vault.rename(filesInVault[i], filesInVault[i].path.replace('🍁', ''))
+                //         }
+                //     }
+
+                //}
 
                 //Notices!!
                 const activeFile = this.app.workspace.getActiveFile()
