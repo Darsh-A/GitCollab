@@ -126,7 +126,7 @@ export class gitCollabSettingTab extends PluginSettingTab {
 
         if (this.plugin.settings.notice == true) {
 
-            containerEl.createEl('h2', { text: 'Notices Settings' });
+            containerEl.createEl('h4', { text: 'Notices Settings' });
 
             new Setting(containerEl)
                 .setName('Notice Message')

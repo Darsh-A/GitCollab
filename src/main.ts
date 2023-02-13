@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, TFile } from 'obsidian';
 import { Octokit } from 'octokit';
 import { gitCollabSettingTab } from 'src/settings';
 import { gitCollabSettings } from './Interfaces/gitCollabSettings';
@@ -39,35 +39,38 @@ export default class gitCollab extends Plugin {
         }
 
         //Cron Job
-        const cronJob: String = `*/${this.settings.checkInterval} * * * * *`
-        cron.schedule(cronJob, this.startCronJob(octokit, statusBarItemEl));
+        const cronJob: String = `*/${this.settings.checkInterval} * * * * *`;
+        cron.schedule(cronJob, () => {
+            this.startCronJob(octokit, statusBarItemEl)
+        });
+
     }
 
     onunload() {
-            console.log('Git Collab: Unloading Plugin')
+        console.log('Git Collab: Unloading Plugin')
     }
 
     async loadSettings() {
-        
+
         const DEFAULT_SETTINGS: gitCollabSettings = {
             checkInterval: 15,
             checkTime: 2,
             token: '',
             owner: '',
             repo: '',
-        
+
             notice: false,
-            status: false,
+            status: true,
             emotes: false,
             noticePrompt: 'File has been edited recently!!!\nCheck the status bar.',
             username: '',
             fileOwners: false,
             nameOwners: '',
-        
+
             debugMode: false,
             cronDebugLogger: false,
             commitDebugLogger: false,
-        
+
         };
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
@@ -76,16 +79,17 @@ export default class gitCollab extends Plugin {
         await this.saveData(this.settings);
     }
 
+
     async startCronJob(octokit: Octokit, statusBarItemEl: any) {
 
-        if (this.settings.debugMode && this.settings.cronDebugLogger){
+        if (this.settings.debugMode && this.settings.cronDebugLogger) {
             console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
         }
 
-        const time_rn= new Date()
+        const time_rn = new Date()
         const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 60000)
 
-        if (this.settings.debugMode && this.settings.cronDebugLogger){
+        if (this.settings.debugMode && this.settings.cronDebugLogger) {
             console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
         }
 
@@ -117,7 +121,7 @@ export default class gitCollab extends Plugin {
             if (response2.data.commit.message.includes('vault backup')) {
                 commits.push(response2.data);
 
-                if (this.settings.commitDebugLogger){
+                if (this.settings.commitDebugLogger) {
                     console.log(`Git Collab: Commit added \n${response2.data.commit.message}`)
                 }
 
@@ -146,72 +150,53 @@ export default class gitCollab extends Plugin {
 
             //Emotes!!
             if (this.settings.emotes == true) {
-                //add a emote in front of the active file and change back when its inactive
+                const emoji = '🍁'
+                for (let i = 0; i < files.length; i++) {
+
+                    const file = this.app.vault.getAbstractFileByPath(files[i])
+
+                    if (file instanceof TFile) {
+
+                        if (file.basename.startsWith(emoji)) {
+                            continue
+                        }
+
+                        const basepath = file.path.replace(`${file.basename}.md`, '')
+                        
+                        this.app.vault.rename(file, `${basepath}${emoji} ${file.basename}.md`)
+
+                        // if the file is not in files array, remove the emoji
+                        if (!files.includes(file.basename)) {
+                            this.app.vault.rename(file, `${basepath}${file.basename.replace(emoji, '')}.md`)
+                        }
+                    }
+                }
+
+                //Notices!!
                 const activeFile = this.app.workspace.getActiveFile()
-                if (activeFile) {
-                    const activeFilePath = activeFile.path
-                    if (files.includes(activeFilePath)) {
-                        //if username is in files 
-                        if (this.settings.username != '') {
-                            if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                                return
+                if (this.settings.notice == true) {
+                    if (activeFile) {
+                        const activeFilePath = activeFile.path
+                        if (files.includes(activeFilePath)) {
+                            //if username is in files 
+                            if (this.settings.username != '') {
+                                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
+                                    return
+                                }
                             }
-                        }
-                        //change file name
-                        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView)
-                        if (activeView) {
-                            activeView.file.name = `🍁 ${activeView.file.name}`
-                        }
-                    }   //revert when file becomes inactive
-                    else {
-                        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView)
-                        if (activeView) {
-                            activeView.file.name = activeView.file.name.replace('🍁 ', '')
+                            new Notice(this.settings.noticePrompt)
                         }
                     }
                 }
             }
+            else {
 
-            //Notices!!
-            const activeFile = this.app.workspace.getActiveFile()
-            if (this.settings.notice == true) {
-                if (activeFile) {
-                    const activeFilePath = activeFile.path
-                    if (files.includes(activeFilePath)) {
-                        //if username is in files 
-                        if (this.settings.username != '') {
-                            if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                                return
-                            }
-                        }
-                        new Notice(this.settings.noticePrompt)
-                    }
-
-                    // if (this.settings.fileOwners == true) {
-                    //     this.registerEvent(this.app.workspace.on("file-open", () => {
-                    //         if (activeFile) {
-                    //             this.addCommand({
-                    //                 id: 'make-file-readonly',
-                    //                 name: 'Make File Readonly',
-                    //                 callback: () => {
-
-
-                    //                 }
-                    //             });
-                    //         }
-                    //     }));
-                    // }
+                if (this.settings.status == true) {
+                    statusBarItemEl.setText('❌ No Files')
+                    statusBarItemEl.ariaLabel = '^^'
                 }
             }
-        }
-        else {
 
-            if (this.settings.status == true) {
-                statusBarItemEl.setText('❌ No Files')
-                statusBarItemEl.ariaLabel = '^^'
-            }
         }
-
     }
-
 }
