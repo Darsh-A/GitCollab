@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, TFile } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, setIcon, TFile } from 'obsidian';
 import { Octokit } from 'octokit';
 import { gitCollabSettingTab } from 'src/settings';
 import { gitCollabSettings } from './Interfaces/gitCollabSettings';
@@ -46,9 +46,43 @@ export default class gitCollab extends Plugin {
 
     }
 
+
     onunload() {
         console.log('Git Collab: Unloading Plugin')
     }
+
+    AddIcontoFile(path: string, Icon: string) {
+        const node = document.querySelector(`[data-path="${path}"]`);
+
+        if (!node) {
+            console.error('element with data path not found', path);
+            return;
+        }
+
+        let titleNode = node.querySelector('.nav-folder-title-content');
+        if (!titleNode) {
+            titleNode = node.querySelector('.nav-file-title-content');
+
+            if (!titleNode) {
+                console.error('element with title not found');
+                return;
+            }
+        }
+
+        // check if there is a possible inheritance icon in the DOM
+        const possibleInheritanceIcon = node.querySelector('.obsidian-icon-folder-icon');
+        if (possibleInheritanceIcon) {
+            possibleInheritanceIcon.remove();
+        }
+
+        const iconNode = document.createElement('div');
+      
+        node.insertBefore(iconNode, titleNode);
+
+    }
+
+
+
 
     async loadSettings() {
 
@@ -62,7 +96,7 @@ export default class gitCollab extends Plugin {
             notice: false,
             status: true,
             emotes: false,
-            activeEmote: '🍁',
+            activeEmote: `'activity'`,
             noticePrompt: 'File has been edited recently!!!\nCheck the status bar.',
             username: '',
             fileOwners: false,
@@ -151,60 +185,38 @@ export default class gitCollab extends Plugin {
 
             //Emotes!!
             if (this.settings.emotes == true) {
-                const emoji = '🍁'
+
                 for (let i = 0; i < files.length; i++) {
 
                     const file = this.app.vault.getAbstractFileByPath(files[i])
 
                     if (file instanceof TFile) {
-
-                        if (file.basename.startsWith(emoji)) {
-                            continue
-                        }
-
-                        const basepath = file.path.replace(`${file.basename}.md`, '')
-
-                        this.app.vault.rename(file, `${basepath}${emoji} ${file.basename}.md`)
-
-                        // remove emoji after 2 mins
-                        setTimeout(() => {
-                            this.app.vault.rename(file, `${basepath}${file.basename.replace(`${emoji} `, '')}.md`)
-                        }, this.settings.checkTime * 60000)
+                        this.AddIcontoFile(file.path, 'activity')
                     }
                 }
-            }
 
-            //Notices!!
-            const activeFile = this.app.workspace.getActiveFile()
-            if (this.settings.notice == true) {
-                if (activeFile) {
-                    const activeFilePath = activeFile.path
-                    if (files.includes(activeFilePath)) {
-                        //if username is in files 
-                        if (this.settings.username != '') {
-                            if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                                return
+                //Notices!!
+                const activeFile = this.app.workspace.getActiveFile()
+                if (this.settings.notice == true) {
+                    if (activeFile) {
+                        const activeFilePath = activeFile.path
+                        if (files.includes(activeFilePath)) {
+                            //if username is in files 
+                            if (this.settings.username != '') {
+                                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
+                                    return
+                                }
                             }
+                            new Notice(this.settings.noticePrompt)
                         }
-                        new Notice(this.settings.noticePrompt)
                     }
                 }
+
             }
 
         }
-        else {
 
-            if (this.settings.emotes == true) {
-                const emoji = '🍁'
-                const files = this.app.vault.getFiles()
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i]
-                    if (file.basename.startsWith(emoji)) {
-                        const basepath = file.path.replace(`${file.basename}.md`, '')
-                        this.app.vault.rename(file, `${basepath}${file.basename.replace(`${emoji} `, '')}.md`)
-                    }
-                }
-            }
+        else {
 
             if (this.settings.status == true) {
                 statusBarItemEl.setText('❌ No Files')
