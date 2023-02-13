@@ -165,37 +165,51 @@ export default class gitCollab extends Plugin {
 
                         this.app.vault.rename(file, `${basepath}${emoji} ${file.basename}.md`)
 
-                        // remove the emoji after two minutes
+                        // remove emoji after 2 mins
                         setTimeout(() => {
                             this.app.vault.rename(file, `${basepath}${file.basename.replace(`${emoji} `, '')}.md`)
-                        }, this.settings.checkTime)
-                    }
-                }
-
-                //Notices!!
-                const activeFile = this.app.workspace.getActiveFile()
-                if (this.settings.notice == true) {
-                    if (activeFile) {
-                        const activeFilePath = activeFile.path
-                        if (files.includes(activeFilePath)) {
-                            //if username is in files 
-                            if (this.settings.username != '') {
-                                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                                    return
-                                }
-                            }
-                            new Notice(this.settings.noticePrompt)
-                        }
+                        }, this.settings.checkTime * 60000)
                     }
                 }
             }
+
+            //Notices!!
+            const activeFile = this.app.workspace.getActiveFile()
+            if (this.settings.notice == true) {
+                if (activeFile) {
+                    const activeFilePath = activeFile.path
+                    if (files.includes(activeFilePath)) {
+                        //if username is in files 
+                        if (this.settings.username != '') {
+                            if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
+                                return
+                            }
+                        }
+                        new Notice(this.settings.noticePrompt)
+                    }
+                }
+            }
+
         }
         else {
+
+            if (this.settings.emotes == true) {
+                const emoji = '🍁'
+                const files = this.app.vault.getFiles()
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i]
+                    if (file.basename.startsWith(emoji)) {
+                        const basepath = file.path.replace(`${file.basename}.md`, '')
+                        this.app.vault.rename(file, `${basepath}${file.basename.replace(`${emoji} `, '')}.md`)
+                    }
+                }
+            }
 
             if (this.settings.status == true) {
                 statusBarItemEl.setText('❌ No Files')
                 statusBarItemEl.ariaLabel = '^^'
             }
         }
+
     }
 }
