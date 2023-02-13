@@ -9,6 +9,7 @@ export interface gitCollabSettings {
     notice: boolean;
     status: boolean;
     emotes: boolean;
+    activeEmote: string;
     noticePrompt: string;
     username: string;
     fileOwners: boolean;

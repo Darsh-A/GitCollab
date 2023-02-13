@@ -88,6 +88,18 @@ export class gitCollabSettingTab extends PluginSettingTab {
                     this.plugin.settings.emotes = value;
                     await this.plugin.saveSettings();
         }));
+        if (this.plugin.settings.emotes == true) {
+            new Setting(containerEl)
+                .setName('Select Emote for Active Files')
+                .setDesc('Default: 🍁')
+                .addText(text => text
+                    .setValue(this.plugin.settings.activeEmote)
+                    .onChange(async (value) => {
+                        this.plugin.settings.activeEmote = value;
+                        await this.plugin.saveSettings();
+                    }
+                    ));
+        }
 
         //Notice when someone opens the active file
         new Setting(containerEl)

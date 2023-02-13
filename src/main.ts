@@ -62,6 +62,7 @@ export default class gitCollab extends Plugin {
             notice: false,
             status: true,
             emotes: false,
+            activeEmote: '🍁',
             noticePrompt: 'File has been edited recently!!!\nCheck the status bar.',
             username: '',
             fileOwners: false,
