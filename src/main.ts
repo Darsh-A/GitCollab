@@ -162,13 +162,13 @@ export default class gitCollab extends Plugin {
                         }
 
                         const basepath = file.path.replace(`${file.basename}.md`, '')
-                        
+
                         this.app.vault.rename(file, `${basepath}${emoji} ${file.basename}.md`)
 
-                        // if the file is not in files array, remove the emoji
-                        if (!files.includes(file.basename)) {
-                            this.app.vault.rename(file, `${basepath}${file.basename.replace(emoji, '')}.md`)
-                        }
+                        // remove the emoji after two minutes
+                        setTimeout(() => {
+                            this.app.vault.rename(file, `${basepath}${file.basename.replace(`${emoji} `, '')}.md`)
+                        }, this.settings.checkTime)
                     }
                 }
 
@@ -189,14 +189,13 @@ export default class gitCollab extends Plugin {
                     }
                 }
             }
-            else {
+        }
+        else {
 
-                if (this.settings.status == true) {
-                    statusBarItemEl.setText('❌ No Files')
-                    statusBarItemEl.ariaLabel = '^^'
-                }
+            if (this.settings.status == true) {
+                statusBarItemEl.setText('❌ No Files')
+                statusBarItemEl.ariaLabel = '^^'
             }
-
         }
     }
 }
