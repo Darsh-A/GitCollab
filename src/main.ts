@@ -6,6 +6,7 @@ var cron = require('node-cron');
 
 export default class gitCollab extends Plugin {
 
+
     settings: gitCollabSettings;
 
     workspace: any;
@@ -51,39 +52,6 @@ export default class gitCollab extends Plugin {
         console.log('Git Collab: Unloading Plugin')
     }
 
-    export const addIconsToDOM = (
-        plugin: gitCollab,
-        data: [string, string | FolderIconObject][],
-        registeredFileExplorers: WeakSet<ExplorerView>,
-        callback?: () => void,
-      ): void => {
-        const fileExplorers = plugin.app.workspace.getLeavesOfType('file-explorer');
-        fileExplorers.forEach((fileExplorer) => {
-          if (registeredFileExplorers.has(fileExplorer.view)) {
-            return;
-          }
-      
-          registeredFileExplorers.add(fileExplorer.view);
-      
-          // create a map with registered file paths to have constant look up time
-          const registeredFilePaths: Record<string, boolean> = {};
-          data.forEach(([path]) => {
-            registeredFilePaths[path] = true;
-          });
-      
-          data.forEach(([dataPath, value]) => {
-            const fileItem = fileExplorer.view.fileItems[dataPath];
-            if (fileItem) {
-              const titleEl = fileItem.titleEl;
-              const titleInnerEl = fileItem.titleInnerEl;
-            });
-        });
-        };
-
-
-
-
-
     async loadSettings() {
 
         const DEFAULT_SETTINGS: gitCollabSettings = {
@@ -112,6 +80,10 @@ export default class gitCollab extends Plugin {
 
     async saveSettings() {
         await this.saveData(this.settings);
+    }
+
+    async AddIcon() {
+
     }
 
 
@@ -189,10 +161,7 @@ export default class gitCollab extends Plugin {
                 for (let i = 0; i < files.length; i++) {
 
                     const file = this.app.vault.getAbstractFileByPath(files[i])
-
-                    if (file instanceof TFile) {
-                        this.AddIcontoFile(file.path, 'activity')
-                    }
+                    
                 }
 
                 //Notices!!
