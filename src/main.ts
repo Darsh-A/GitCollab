@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, setIcon, TFile } from 'obsidian';
+import { Notice, Plugin} from 'obsidian';
 import { Octokit } from 'octokit';
 import { gitCollabSettingTab } from 'src/settings';
 import { gitCollabSettings } from './Interfaces/gitCollabSettings';
@@ -8,9 +8,7 @@ export default class gitCollab extends Plugin {
 
 
     settings: gitCollabSettings;
-
     workspace: any;
-
 
     async onload() {
 
@@ -24,7 +22,7 @@ export default class gitCollab extends Plugin {
 
         //Add status bar item
         if (this.settings.status == true) {
-            statusBarItemEl.setText('Loading...')
+            statusBarItemEl.setText('Loading Git-Collab...')
         }
 
         //Github Authentication
@@ -34,17 +32,86 @@ export default class gitCollab extends Plugin {
 
         //Check if the settings are set
         if (this.settings.token == '' || this.settings.owner == '' || this.settings.repo == '') {
-            statusBarItemEl.setText('❌ Settings not set')
-            statusBarItemEl.ariaLabel = 'Please check git collab settings tab.'
-            return
+            statusBarItemEl.setText(this.settings.settingsNotSetStatus)
+            statusBarItemEl.ariaLabel = this.settings.settingsNotSetLabel
+            return;
+        }
+
+        if (this.settings.status){
+            statusBarItemEl.setText(this.settings.noCommitsFoundStatus);
+            statusBarItemEl.ariaLabel = this.settings.noCommitsFoundLabel;
         }
 
         //Cron Job
-        const cronJob: String = `*/${this.settings.checkInterval} * * * * *`;
-        cron.schedule(cronJob, () => {
-            this.startCronJob(octokit, statusBarItemEl)
-        });
+        const cronJob: String = `*/${this.settings.checkInterval} * * * * *`
+        cron.schedule(cronJob,async () => {
 
+            if (this.settings.debugMode && this.settings.cronDebugLogger){
+                console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
+            }
+            
+            const commits = await this.getCommits(octokit);
+
+            if (commits.length == 0) {
+                if (this.settings.debugMode && this.settings.commitDebugLogger){
+                    console.log(`Git Collab: No commits found`);
+                }
+                return;    
+            }
+            else if (this.settings.debugMode && this.settings.cronDebugLogger){
+                console.log(`Git Collab: Commits fetched`);
+            }
+
+            //Get all modified files from commit and map their authors to them
+    
+            let filenames: string[] = []
+            let files: any = []
+            let fileMap:any = {}
+            for (let i = 0; i < commits.length; i++) {
+                for (let j = 0; j < commits[i].files.length; j++) {
+                    filenames.indexOf(`${commits[i].commit.author.name} - ${commits[i].files[j].filename}`) == -1 ? filenames.push(`${commits[i].commit.author.name} - ${commits[i].files[j].filename}`) : null
+                    files.indexOf(commits[i].files[j].filename) == -1 ? files.push(commits[i].files[j].filename) : null
+                    fileMap[commits[i].files[j].filename] = commits[i].commit.author.name
+                }
+            }
+
+            if (this.settings.notice || this.settings.status) {
+
+                const activeFile = this.app.workspace.getActiveFile();
+                if (!activeFile)
+                    return;
+
+                const author = fileMap[activeFile.path];
+                const vaultOwner = this.settings.username;
+
+                if (this.settings.notice) {
+                    if (author && author != vaultOwner) {
+                        const noticePromptWords : string[] = this.settings.noticePrompt.split(' ');
+                        noticePromptWords.forEach((word, index) => {
+                            if (word == '$author') {
+                                noticePromptWords[index] = author;
+                            }
+                            else if (word == '$fileName') {
+                                noticePromptWords[index] = activeFile.basename;
+                            }
+                        });
+                        const noticePrompt = noticePromptWords.join(' ');
+                        new Notice(noticePrompt);
+                    }
+                }
+
+                if (this.settings.status) {
+                    if (author && author != vaultOwner) {
+                        statusBarItemEl.setText(this.settings.fileNotEditableStatus);
+                        statusBarItemEl.ariaLabel = filenames.join('\n')
+                    }
+                    else {
+                        statusBarItemEl.setText(this.settings.fileEditableStatus);
+                        statusBarItemEl.ariaLabel = filenames.join('\n')
+                    }
+                }
+            }
+        });                
     }
 
 
@@ -62,10 +129,7 @@ export default class gitCollab extends Plugin {
             repo: '',
 
             notice: false,
-            status: true,
-            emotes: false,
-            activeEmote: `'activity'`,
-            noticePrompt: 'File has been edited recently!!!\nCheck the status bar.',
+            status: false,
             username: '',
             fileOwners: false,
             nameOwners: '',
@@ -74,6 +138,15 @@ export default class gitCollab extends Plugin {
             cronDebugLogger: false,
             commitDebugLogger: false,
 
+            allFormatting: false,
+            settingsNotSetStatus: '✖',
+            settingsNotSetLabel: 'Settings have not been set.',
+            noCommitsFoundStatus: '✔',
+            noCommitsFoundLabel: 'No commits found enjoy writing notes!',
+            noticePrompt: 'This file is being edited by $author',
+            fileEditableStatus: '✔',
+            fileNotEditableStatus: '✖',
+        
         };
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
@@ -87,111 +160,49 @@ export default class gitCollab extends Plugin {
     }
 
 
-    async startCronJob(octokit: Octokit, statusBarItemEl: any) {
-
-        if (this.settings.debugMode && this.settings.cronDebugLogger) {
-            console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
-        }
-
-        const time_rn = new Date()
-        const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 60000)
-
-        if (this.settings.debugMode && this.settings.cronDebugLogger) {
-            console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
-        }
-
-        const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
-            owner: this.settings.owner,
-            repo: this.settings.repo,
-            since: time_bf.toISOString(),
-            until: time_rn.toISOString(),
-            per_page: 100,
-            page: 1,
-        });
-
-
-        let sha = []
-        for (let i = 0; i < response.data.length; i++) {
-            sha.push(response.data[i].sha)
-        }
-
-        let commits = []
-        for (let i = 0; i < sha.length; i++) {
-
-            const response2 = await octokit.request("GET /repos/{owner}/{repo}/commits/{ref}{?sha}", {
+    async getCommits(octokit: Octokit) {
+        const time_rn= new Date()
+            const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 60000)
+    
+            if (this.settings.debugMode && this.settings.cronDebugLogger){
+                console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
+            }
+    
+            const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
                 owner: this.settings.owner,
                 repo: this.settings.repo,
-                ref: 'main',
-                sha: sha[i]
-            })
-
-            if (response2.data.commit.message.includes('vault backup')) {
-                commits.push(response2.data);
-
-                if (this.settings.commitDebugLogger) {
-                    console.log(`Git Collab: Commit added \n${response2.data.commit.message}`)
-                }
-
+                since: time_bf.toISOString(),
+                until: time_rn.toISOString(),
+                per_page: 100,
+                page: 1,
+            });
+    
+    
+            let sha = []
+            for (let i = 0; i < response.data.length; i++) {
+                sha.push(response.data[i].sha)
             }
-        }
-
-        //If there are commits under the time interval
-        if (commits.length != 0) {
-
-            let filenames: string[] = []
-            let files = []
-
-            for (let i = 0; i < commits.length; i++) {
-
-                for (let j = 0; j < commits[i].files.length; j++) {
-                    filenames.indexOf(`${commits[i].commit.author.name} - ${commits[i].files[j].filename}`) == -1 ? filenames.push(`${commits[i].commit.author.name} - ${commits[i].files[j].filename}`) : null
-                    files.indexOf(commits[i].files[j].filename) == -1 ? files.push(commits[i].files[j].filename) : null
-                }
-            }
-
-            //Status Bar!!
-            if (this.settings.status == true) {
-                statusBarItemEl.setText('✅ Files are Active')
-                statusBarItemEl.ariaLabel = filenames.join('\n')
-            }
-
-            //Emotes!!
-            if (this.settings.emotes == true) {
-
-                for (let i = 0; i < files.length; i++) {
-
-                    const file = this.app.vault.getAbstractFileByPath(files[i])
-                    
-                }
-
-                //Notices!!
-                const activeFile = this.app.workspace.getActiveFile()
-                if (this.settings.notice == true) {
-                    if (activeFile) {
-                        const activeFilePath = activeFile.path
-                        if (files.includes(activeFilePath)) {
-                            //if username is in files 
-                            if (this.settings.username != '') {
-                                if (filenames.includes(`${this.settings.username} - ${activeFilePath}`)) {
-                                    return
-                                }
-                            }
-                            new Notice(this.settings.noticePrompt)
-                        }
+    
+            let commits = []
+            for (let i = 0; i < sha.length; i++) {
+    
+                const response2 = await octokit.request("GET /repos/{owner}/{repo}/commits/{ref}{?sha}", {
+                    owner: this.settings.owner,
+                    repo: this.settings.repo,
+                    ref: 'main',
+                    sha: sha[i]
+                })
+    
+                if (response2.data.commit.message.includes('vault backup')) {
+                    commits.push(response2.data);
+    
+                    if (this.settings.commitDebugLogger){
+                        console.log(`Git Collab: Commit added \n${response2.data.commit.message}`)
                     }
+    
                 }
-
             }
 
-        }
-
-        else {
-
-            if (this.settings.status == true) {
-                statusBarItemEl.setText('❌ No Files')
-                statusBarItemEl.ariaLabel = '^^'
-            }
-        }
-
+            return commits;
     }
 }
