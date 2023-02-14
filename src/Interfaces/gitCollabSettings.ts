@@ -8,8 +8,6 @@ export interface gitCollabSettings {
 
     notice: boolean;
     status: boolean;
-    emotes: boolean;
-    noticePrompt: string;
     username: string;
     fileOwners: boolean;
     nameOwners: string;
@@ -17,4 +15,13 @@ export interface gitCollabSettings {
     debugMode: boolean;
     cronDebugLogger: boolean;
     commitDebugLogger: boolean;
+
+    allFormatting: boolean;
+    settingsNotSetStatus: string;
+    settingsNotSetLabel: string;
+    noCommitsFoundStatus: string;
+    noCommitsFoundLabel: string;
+    noticePrompt: string;
+    fileEditableStatus: string;
+    fileNotEditableStatus: string;
 }

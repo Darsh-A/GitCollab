@@ -1,5 +1,6 @@
 import {App, PluginSettingTab, Setting} from 'obsidian';
 import gitCollab from 'src/main';
+import { text } from 'stream/consumers';
 
 //Settings Tab
 
@@ -78,17 +79,6 @@ export class gitCollabSettingTab extends PluginSettingTab {
 
         //Optional Settings
 
-        //Filename
-        new Setting(containerEl)
-            .setName('Active File Emotes')
-            .setDesc('Show Emotes for active files')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.emotes)
-                .onChange(async (value) => {
-                    this.plugin.settings.emotes = value;
-                    await this.plugin.saveSettings();
-        }));
-
         //Notice when someone opens the active file
         new Setting(containerEl)
             .setName('Notices!')
@@ -102,42 +92,54 @@ export class gitCollabSettingTab extends PluginSettingTab {
         }));
 
         //add status to the status bar
-            new Setting(containerEl)
-                .setName('Status Bar')
-                .setDesc('Show Status of active files in the status bar')
-                .addToggle(toggle => toggle
-                    .setValue(this.plugin.settings.status)
-                    .onChange(async (value) => {
-                        this.plugin.settings.status = value;
-                        await this.plugin.saveSettings();
-                        this.display();
-            }));
+        new Setting(containerEl)
+            .setName('Status Bar')
+            .setDesc('Show Status of active files in the status bar')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.status)
+                .onChange(async (value) => {
+                    this.plugin.settings.status = value;
+                    await this.plugin.saveSettings();
+                    this.display();
+        }));
+
+        new Setting(containerEl)
+            .setName('Additional Formatting')
+            .setDesc('Format almost all visible properties.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.allFormatting)
+                .onChange(async (value) => {
+                    this.plugin.settings.allFormatting = value;
+                    await this.plugin.saveSettings();
+                    this.display();
+                })    
+            );
         
-            new Setting(containerEl)
-                .setName('Debug Mode')
-                .setDesc('Print useful debugging messages to console.')
-                .addToggle(toggle => toggle
-                    .setValue(this.plugin.settings.debugMode)
-                    .onChange(async (value) => {
-                        this.plugin.settings.debugMode = value;
-                        await this.plugin.saveSettings();
-                        this.display();
-                    }));
+        new Setting(containerEl)
+            .setName('Debug Mode')
+            .setDesc('Print useful debugging messages to console.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.debugMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.debugMode = value;
+                    await this.plugin.saveSettings();
+                    this.display();
+                }));
 
         if (this.plugin.settings.notice == true) {
 
-            containerEl.createEl('h2', { text: 'Notices Settings' });
+            containerEl.createEl('h2', { text: 'Notice Settings' });
 
             new Setting(containerEl)
-                .setName('Notice Message')
-                .setDesc('Default: This file is being edited by someone else')
-                .addText(text => text
+                .setName('Notice Prompt Text')
+                .setDesc('Text in the notice prompt when someone else is editing a file. Special keywords: $author, $fileName')
+                .addTextArea(text => text
                     .setValue(this.plugin.settings.noticePrompt)
                     .onChange(async (value) => {
                         this.plugin.settings.noticePrompt = value;
                         await this.plugin.saveSettings();
-                    }
-                    ));
+                    })
+                );
 
             new Setting(containerEl)
                 .setName('Enter "your" Github Username')
@@ -200,6 +202,78 @@ export class gitCollabSettingTab extends PluginSettingTab {
                         this.plugin.settings.commitDebugLogger = value;
                         await this.plugin.saveSettings();
                     }));
+        }
+
+        if (this.plugin.settings.allFormatting) {
+
+            containerEl.createEl('h5', { text: 'Formatting Settings' });
+
+            new Setting(containerEl)
+                .setName('Settings not set Status Text')
+                .setDesc('The actual label displayed when settings are not set.')
+                .addTextArea(text => text
+                    .setValue(this.plugin.settings.settingsNotSetStatus)
+                    .onChange(async (value) => {
+                        this.plugin.settings.settingsNotSetStatus = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+            
+            new Setting(containerEl)
+                .setName('Settings not set Status Label')
+                .setDesc('The arial label text when settings are not set.')
+                .addTextArea(text => text
+                    .setValue(this.plugin.settings.settingsNotSetLabel)
+                    .onChange(async (value) => {
+                        this.plugin.settings.settingsNotSetLabel = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+                    
+            new Setting(containerEl)
+                .setName('No Commits Found Status Text')
+                .setDesc('The actual label displayed when no commits were found. Restart Obsidian for it to take effect.')
+                .addTextArea(text => text
+                    .setValue(this.plugin.settings.noCommitsFoundStatus)
+                    .onChange(async (value) => {
+                        this.plugin.settings.noCommitsFoundStatus = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+            
+            new Setting(containerEl)
+                .setName('No Commits Found Status Label')
+                .setDesc('The arial label displayed when no commits were found. Restart Obsidian for it to take effect.')
+                .addTextArea(text => text
+                    .setValue(this.plugin.settings.noCommitsFoundLabel)
+                    .onChange(async (value) => {
+                        this.plugin.settings.noCommitsFoundLabel = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+            
+            new Setting(containerEl)
+                .setName('File Editable Status Text')
+                .setDesc('The actual label displayed when a file can be edited.')
+                .addTextArea(text => text
+                    .setValue(this.plugin.settings.fileEditableStatus)
+                    .onChange(async (value) => {
+                        this.plugin.settings.fileEditableStatus = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+            
+            new Setting(containerEl)
+                .setName('File Not Editable Status Text')
+                .setDesc('The actual label displayed when a file is edited by someone else.')
+                .addTextArea(text => text
+                    .setValue(this.plugin.settings.fileNotEditableStatus)
+                    .onChange(async (value) => {
+                        this.plugin.settings.fileNotEditableStatus = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
         }
 
     }
