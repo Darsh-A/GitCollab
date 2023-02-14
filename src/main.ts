@@ -51,35 +51,35 @@ export default class gitCollab extends Plugin {
         console.log('Git Collab: Unloading Plugin')
     }
 
-    AddIcontoFile(path: string, Icon: string) {
-        const node = document.querySelector(`[data-path="${path}"]`);
-
-        if (!node) {
-            console.error('element with data path not found', path);
+    export const addIconsToDOM = (
+        plugin: gitCollab,
+        data: [string, string | FolderIconObject][],
+        registeredFileExplorers: WeakSet<ExplorerView>,
+        callback?: () => void,
+      ): void => {
+        const fileExplorers = plugin.app.workspace.getLeavesOfType('file-explorer');
+        fileExplorers.forEach((fileExplorer) => {
+          if (registeredFileExplorers.has(fileExplorer.view)) {
             return;
-        }
-
-        let titleNode = node.querySelector('.nav-folder-title-content');
-        if (!titleNode) {
-            titleNode = node.querySelector('.nav-file-title-content');
-
-            if (!titleNode) {
-                console.error('element with title not found');
-                return;
-            }
-        }
-
-        // check if there is a possible inheritance icon in the DOM
-        const possibleInheritanceIcon = node.querySelector('.obsidian-icon-folder-icon');
-        if (possibleInheritanceIcon) {
-            possibleInheritanceIcon.remove();
-        }
-
-        const iconNode = document.createElement('div');
+          }
       
-        node.insertBefore(iconNode, titleNode);
+          registeredFileExplorers.add(fileExplorer.view);
+      
+          // create a map with registered file paths to have constant look up time
+          const registeredFilePaths: Record<string, boolean> = {};
+          data.forEach(([path]) => {
+            registeredFilePaths[path] = true;
+          });
+      
+          data.forEach(([dataPath, value]) => {
+            const fileItem = fileExplorer.view.fileItems[dataPath];
+            if (fileItem) {
+              const titleEl = fileItem.titleEl;
+              const titleInnerEl = fileItem.titleInnerEl;
+            });
+        });
+        };
 
-    }
 
 
 
