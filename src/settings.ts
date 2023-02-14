@@ -1,6 +1,5 @@
 import {App, PluginSettingTab, Setting} from 'obsidian';
 import gitCollab from 'src/main';
-import { text } from 'stream/consumers';
 
 //Settings Tab
 

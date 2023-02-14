@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
+import { Notice, Plugin} from 'obsidian';
 import { Octokit } from 'octokit';
 import { gitCollabSettingTab } from 'src/settings';
 import { gitCollabSettings } from './Interfaces/gitCollabSettings';
