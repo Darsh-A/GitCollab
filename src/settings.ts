@@ -1,5 +1,6 @@
 import {App, PluginSettingTab, Setting} from 'obsidian';
 import gitCollab from 'src/main';
+import { PassThrough } from 'stream';
 
 //Settings Tab
 
@@ -18,64 +19,16 @@ export class gitCollabSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         const mainSettingsContainer = containerEl.createDiv();
-        mainSettingsContainer.createEl('h1', { text: 'Settings for Git-Collab' });
+        mainSettingsContainer.createEl('h1', { text: 'Git-Collab' });
 
-        //Required Settings
-        new Setting(mainSettingsContainer)
-            .setName('Github Personal Access Token')
-            .setDesc('Do not commit the .obsidian/plugin/Git-Check/main.js file to Github')
-            .addText(text => text
-                .setValue(this.plugin.settings.token)
-                .onChange(async (value) => {
-                    this.plugin.settings.token = value;
-                    await this.plugin.saveSettings();
-                }));
+        //Personal Settings
+
+        mainSettingsContainer.createEl('h3', { text: 'Personal Settings' });
+        mainSettingsContainer.createEl('strong', {text: 'Ensure that .obsidian/plugins/git-collab/ is added to your .gitignore file!', attr: {style: 'color: var(--color-red);'}});
 
         new Setting(mainSettingsContainer)
-            .setName('Repository Owner')
-            .setDesc('Github repository Owner Username')
-            .addText(text => text
-                .setValue(this.plugin.settings.owner)
-                .onChange(async (value) => {
-                    this.plugin.settings.owner = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(mainSettingsContainer)
-            .setName('Repository Name')
-            .setDesc('Github repository name')
-            .addText(text => text
-                .setValue(this.plugin.settings.repo)
-                .onChange(async (value) => {
-                    this.plugin.settings.repo = value;
-                    await this.plugin.saveSettings();
-                }
-                ));
-        
-        new Setting(mainSettingsContainer)
-                .setName('Time Interval to Check for Activity (in mins)')
-                .setDesc('Default: 2 minutes')
-                .addText(text => text
-                    .setPlaceholder('2')
-                    .setValue(`${this.plugin.settings.checkTime}`)
-                    .onChange(async (value) => {
-                        this.plugin.settings.checkTime = Math.round(parseFloat(value));
-                        await this.plugin.saveSettings();
-        }));
-        new Setting(mainSettingsContainer)
-            .setName('Time between each check (in seconds)')
-            .setDesc('Default: 15 seconds')
-            .addText(text => text
-                .setPlaceholder('15')
-                .setValue(`${this.plugin.settings.checkInterval}`)
-                .onChange(async (value) => {
-                    this.plugin.settings.checkInterval = Math.round(parseFloat(value));
-                    await this.plugin.saveSettings();
-        }));
-
-        new Setting(mainSettingsContainer)
-                .setName('Enter "your" Github Username')
-                .setDesc('So that you dont get a notice for your own edits')
+                .setName('Enter GitHub Username')
+                .setDesc('GitHub username of your account.')
                 .addText(text => text
                     .setValue(this.plugin.settings.username)
                     .onChange(async (value) => {
@@ -84,12 +37,81 @@ export class gitCollabSettingTab extends PluginSettingTab {
                     }
         ));
 
-        //Optional Settings
+        new Setting(mainSettingsContainer)
+            .setName('Github Personal Access Token')
+            .setDesc('Personal Access Token for Github. Find more info here: https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token')
+            .addText(text => text
+                .setValue(this.plugin.settings.token)
+                .onChange(async (value) => {
+                    this.plugin.settings.token = value;
+                    await this.plugin.saveSettings();
+        }));
+
+        mainSettingsContainer.createEl("h3", {text: "Repository Settings"});
+
+        new Setting(mainSettingsContainer)
+            .setName('GitHub Repository URL')
+            .setDesc('URL of the GitHub repository you want to use. Example: https://github.com/Drosophilaa/Obsidian-GitCollab.git')
+            .addText(text => text
+                .setValue(this.plugin.settings.gitHubUrl)
+                .onChange(async (value) => {
+                    this.plugin.settings.gitHubUrl = value;
+                    await this.plugin.saveSettings();
+        }));
+        
+        new Setting(mainSettingsContainer)
+                .setName('Time Interval to check for Activity (in mins)')
+                .setDesc(`Fetches commits from past ${this.plugin.settings.checkTime} minutes. Default: 2 minutes`)
+                .addText(text => text
+                    .setPlaceholder('2')
+                    .setValue(`${this.plugin.settings.checkTime}`)
+                    .onChange(async (value) => {
+                        this.plugin.settings.checkTime = Math.round(parseFloat(value));
+                        await this.plugin.saveSettings();
+        }));
+
+        new Setting(mainSettingsContainer)
+            .setName('Time between each check (in seconds)')
+            .setDesc(`Fetches commits every ${this.plugin.settings.checkInterval}. Default: 15 seconds`)
+            .addText(text => text
+                .setPlaceholder('15')
+                .setValue(`${this.plugin.settings.checkInterval}`)
+                .onChange(async (value) => {
+                    this.plugin.settings.checkInterval = Math.round(parseFloat(value));
+                    await this.plugin.saveSettings();
+        }));
+
+        //Feature Toggles
+        
+        mainSettingsContainer.createEl("h3", {text: "Feature Toggles"});
+
+        new Setting(mainSettingsContainer)
+            .setName('Ribbon Button')
+            .setDesc(`Adds a Button to ribbon to show all commits by every author in past ${this.plugin.settings.ribbonCheckInterval} minutes.`)
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.ribbon)
+                .onChange(async (value) => {
+                    this.plugin.settings.ribbon = value;
+                    await this.plugin.saveSettings();
+                    this.display();
+        }));
+
+        //add status to the status bar
+        new Setting(mainSettingsContainer)
+            .setName('Status Bar')
+            .setDesc('Display Status of active files in the status bar.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.status)
+                .onChange(async (value) => {
+                    this.plugin.settings.status = value;
+                    await this.plugin.saveSettings();
+                    this.display();
+        }));
 
         //Notice when someone opens the active file
         new Setting(mainSettingsContainer)
             .setName('Notices!')
-            .setDesc('Give Notice for active files')
+            .setDesc('Give Notices if someone else is editing the same file.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.notice)
                 .onChange(async (value) => {
@@ -98,17 +120,7 @@ export class gitCollabSettingTab extends PluginSettingTab {
                     this.display();
         }));
 
-        //add status to the status bar
-        new Setting(mainSettingsContainer)
-            .setName('Status Bar')
-            .setDesc('Show Status of active files in the status bar')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.status)
-                .onChange(async (value) => {
-                    this.plugin.settings.status = value;
-                    await this.plugin.saveSettings();
-                    this.display();
-        }));
+        mainSettingsContainer.createEl("h3", {text: "Additonal Settings"});
 
         new Setting(mainSettingsContainer)
             .setName('Additional Formatting')
@@ -131,7 +143,19 @@ export class gitCollabSettingTab extends PluginSettingTab {
                     this.plugin.settings.debugMode = value;
                     await this.plugin.saveSettings();
                     this.display();
-                }));
+        }));
+
+        new Setting(mainSettingsContainer)
+            .setName('Close Obsidian')
+            .setDesc('Some options require a restart for obsidian to take effect. Click this button to close Obsidian.')
+            .addButton((button) => {
+                button.buttonEl.setAttr('style', 'color: var(--color-red);');
+                button
+                .setButtonText('Close Obsidian')
+                .onClick(async () => {
+                    window.close();
+                });
+            });
 
         if (this.plugin.settings.notice == true && this.plugin.settings.allFormatting == true) {
 
@@ -230,7 +254,7 @@ export class gitCollabSettingTab extends PluginSettingTab {
 
             new Setting(ribbonContainer)
                 .setName('Ribbon Interval')
-                .setDesc('Fetch all commits in previous x minutes. Default is 5 minutes.')
+                .setDesc(`Fetch all commits in previous ${this.plugin.settings.ribbonCheckInterval} minutes. Default is 5 minutes.`)
                 .addText(text => text
                     .setValue(this.plugin.settings.ribbonCheckInterval.toString())
                     .onChange(async (value) => {

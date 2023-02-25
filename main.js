@@ -9191,41 +9191,47 @@ var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     const mainSettingsContainer = containerEl.createDiv();
-    mainSettingsContainer.createEl("h1", { text: "Settings for Git-Collab" });
-    new import_obsidian.Setting(mainSettingsContainer).setName("Github Personal Access Token").setDesc("Do not commit the .obsidian/plugin/Git-Check/main.js file to Github").addText((text) => text.setValue(this.plugin.settings.token).onChange(async (value) => {
-      this.plugin.settings.token = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(mainSettingsContainer).setName("Repository Owner").setDesc("Github repository Owner Username").addText((text) => text.setValue(this.plugin.settings.owner).onChange(async (value) => {
-      this.plugin.settings.owner = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(mainSettingsContainer).setName("Repository Name").setDesc("Github repository name").addText((text) => text.setValue(this.plugin.settings.repo).onChange(async (value) => {
-      this.plugin.settings.repo = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(mainSettingsContainer).setName("Time Interval to Check for Activity (in mins)").setDesc("Default: 2 minutes").addText((text) => text.setPlaceholder("2").setValue(`${this.plugin.settings.checkTime}`).onChange(async (value) => {
-      this.plugin.settings.checkTime = Math.round(parseFloat(value));
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(mainSettingsContainer).setName("Time between each check (in seconds)").setDesc("Default: 15 seconds").addText((text) => text.setPlaceholder("15").setValue(`${this.plugin.settings.checkInterval}`).onChange(async (value) => {
-      this.plugin.settings.checkInterval = Math.round(parseFloat(value));
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(mainSettingsContainer).setName('Enter "your" Github Username').setDesc("So that you dont get a notice for your own edits").addText((text) => text.setValue(this.plugin.settings.username).onChange(async (value) => {
+    mainSettingsContainer.createEl("h1", { text: "Git-Collab" });
+    mainSettingsContainer.createEl("h3", { text: "Personal Settings" });
+    mainSettingsContainer.createEl("strong", { text: "Ensure that .obsidian/plugins/git-collab/ is added to your .gitignore file!", attr: { style: "color: var(--color-red);" } });
+    new import_obsidian.Setting(mainSettingsContainer).setName("Enter GitHub Username").setDesc("GitHub username of your account.").addText((text) => text.setValue(this.plugin.settings.username).onChange(async (value) => {
       this.plugin.settings.username = value;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian.Setting(mainSettingsContainer).setName("Notices!").setDesc("Give Notice for active files").addToggle((toggle) => toggle.setValue(this.plugin.settings.notice).onChange(async (value) => {
-      this.plugin.settings.notice = value;
+    new import_obsidian.Setting(mainSettingsContainer).setName("Github Personal Access Token").setDesc("Personal Access Token for Github. Find more info here: https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token").addText((text) => text.setValue(this.plugin.settings.token).onChange(async (value) => {
+      this.plugin.settings.token = value;
+      await this.plugin.saveSettings();
+    }));
+    mainSettingsContainer.createEl("h3", { text: "Repository Settings" });
+    new import_obsidian.Setting(mainSettingsContainer).setName("GitHub Repository URL").setDesc("URL of the GitHub repository you want to use. Example: https://github.com/Drosophilaa/Obsidian-GitCollab.git").addText((text) => text.setValue(this.plugin.settings.gitHubUrl).onChange(async (value) => {
+      this.plugin.settings.gitHubUrl = value;
+      await this.plugin.saveSettings();
+    }));
+    new import_obsidian.Setting(mainSettingsContainer).setName("Time Interval to check for Activity (in mins)").setDesc(`Fetches commits from past ${this.plugin.settings.checkTime} minutes. Default: 2 minutes`).addText((text) => text.setPlaceholder("2").setValue(`${this.plugin.settings.checkTime}`).onChange(async (value) => {
+      this.plugin.settings.checkTime = Math.round(parseFloat(value));
+      await this.plugin.saveSettings();
+    }));
+    new import_obsidian.Setting(mainSettingsContainer).setName("Time between each check (in seconds)").setDesc(`Fetches commits every ${this.plugin.settings.checkInterval}. Default: 15 seconds`).addText((text) => text.setPlaceholder("15").setValue(`${this.plugin.settings.checkInterval}`).onChange(async (value) => {
+      this.plugin.settings.checkInterval = Math.round(parseFloat(value));
+      await this.plugin.saveSettings();
+    }));
+    mainSettingsContainer.createEl("h3", { text: "Feature Toggles" });
+    new import_obsidian.Setting(mainSettingsContainer).setName("Ribbon Button").setDesc(`Adds a Button to ribbon to show all commits by every author in past ${this.plugin.settings.ribbonCheckInterval} minutes.`).addToggle((toggle) => toggle.setValue(this.plugin.settings.ribbon).onChange(async (value) => {
+      this.plugin.settings.ribbon = value;
       await this.plugin.saveSettings();
       this.display();
     }));
-    new import_obsidian.Setting(mainSettingsContainer).setName("Status Bar").setDesc("Show Status of active files in the status bar").addToggle((toggle) => toggle.setValue(this.plugin.settings.status).onChange(async (value) => {
+    new import_obsidian.Setting(mainSettingsContainer).setName("Status Bar").setDesc("Display Status of active files in the status bar.").addToggle((toggle) => toggle.setValue(this.plugin.settings.status).onChange(async (value) => {
       this.plugin.settings.status = value;
       await this.plugin.saveSettings();
       this.display();
     }));
+    new import_obsidian.Setting(mainSettingsContainer).setName("Notices!").setDesc("Give Notices if someone else is editing the same file.").addToggle((toggle) => toggle.setValue(this.plugin.settings.notice).onChange(async (value) => {
+      this.plugin.settings.notice = value;
+      await this.plugin.saveSettings();
+      this.display();
+    }));
+    mainSettingsContainer.createEl("h3", { text: "Additonal Settings" });
     new import_obsidian.Setting(mainSettingsContainer).setName("Additional Formatting").setDesc("Format almost all visible properties.").addToggle((toggle) => toggle.setValue(this.plugin.settings.allFormatting).onChange(async (value) => {
       this.plugin.settings.allFormatting = value;
       await this.plugin.saveSettings();
@@ -9236,6 +9242,12 @@ var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
       await this.plugin.saveSettings();
       this.display();
     }));
+    new import_obsidian.Setting(mainSettingsContainer).setName("Close Obsidian").setDesc("Some options require a restart for obsidian to take effect. Click this button to close Obsidian.").addButton((button) => {
+      button.buttonEl.setAttr("style", "color: var(--color-red);");
+      button.setButtonText("Close Obsidian").onClick(async () => {
+        window.close();
+      });
+    });
     if (this.plugin.settings.notice == true && this.plugin.settings.allFormatting == true) {
       const noticeContainer = containerEl.createDiv();
       noticeContainer.createEl("h1", { text: "Notice Settings" });
@@ -9275,39 +9287,39 @@ var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
     if (this.plugin.settings.ribbon == true) {
       const ribbonContainer = containerEl.createDiv();
       ribbonContainer.createEl("h1", { text: "Ribbon Button Settings" });
-      new import_obsidian.Setting(ribbonContainer).setName("Ribbon Interval").setDesc("Fetch all commits in previous x minutes. Default is 5 minutes.").addText((text) => text.setValue(this.plugin.settings.ribbonCheckInterval.toString()).onChange(async (value) => {
+      new import_obsidian.Setting(ribbonContainer).setName("Ribbon Interval").setDesc(`Fetch all commits in previous ${this.plugin.settings.ribbonCheckInterval} minutes. Default is 5 minutes.`).addText((text) => text.setValue(this.plugin.settings.ribbonCheckInterval.toString()).onChange(async (value) => {
         this.plugin.settings.ribbonCheckInterval = parseInt(value);
         await this.plugin.saveSettings();
       }));
       if (this.plugin.settings.allFormatting == true) {
         const ribbonFormattingContainer = ribbonContainer.createDiv();
-        ribbonFormattingContainer.createEl("h3", { text: "Ribbon Formatting" });
+        ribbonFormattingContainer.createEl("h3", { text: "Ribbon Modal Formatting" });
         ribbonFormattingContainer.createEl("strong", { text: "Danger! Do not mess with this if you do not know what you are doing!", attr: { style: "color: var(--text-error); text-decoration: underline; text-decoration-color: var(--text-error);" } });
-        new import_obsidian.Setting(ribbonFormattingContainer).setName("Modal Title CSS").setDesc("CSS for the title of the modal").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalTitleCSS).onChange(async (value) => {
+        new import_obsidian.Setting(ribbonFormattingContainer).setName("Title CSS").setDesc("CSS for the title of the modal.Default is:\ntext-align: center; font-size: 50px; color: var(--color-green); padding-bottom: 10px;").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalTitleCSS).onChange(async (value) => {
           this.plugin.settings.ribbonModalTitleCSS = value;
           await this.plugin.saveSettings();
         }));
-        new import_obsidian.Setting(ribbonFormattingContainer).setName("Modal Fetching Commits CSS").setDesc("CSS for the fetching commits text.").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalFetchingCommitsCSS).onChange(async (value) => {
+        new import_obsidian.Setting(ribbonFormattingContainer).setName("Fetching Commits CSS").setDesc("CSS for the fetching commits text. Default is:\ntext-align: left; font-size: 20px; color: var(--color-blue);").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalFetchingCommitsCSS).onChange(async (value) => {
           this.plugin.settings.ribbonModalFetchingCommitsCSS = value;
           await this.plugin.saveSettings();
         }));
-        new import_obsidian.Setting(ribbonFormattingContainer).setName("Modal No Commits CSS").setDesc("CSS for the no commits text.").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalNoCommitsCSS).onChange(async (value) => {
+        new import_obsidian.Setting(ribbonFormattingContainer).setName("No Commits CSS").setDesc("CSS for the no commits text. Default is:\ntext-align: center; font-size: 30px; color: var(--color-red);").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalNoCommitsCSS).onChange(async (value) => {
           this.plugin.settings.ribbonModalNoCommitsCSS = value;
           await this.plugin.saveSettings();
         }));
-        new import_obsidian.Setting(ribbonFormattingContainer).setName("Modal No Commits Text").setDesc("Text to display when no commits are found.").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalNoCommitsText).onChange(async (value) => {
+        new import_obsidian.Setting(ribbonFormattingContainer).setName("No Commits Text").setDesc("Text to display when no commits are found. Default is:\nNo Commits Found").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalNoCommitsText).onChange(async (value) => {
           this.plugin.settings.ribbonModalNoCommitsText = value;
           await this.plugin.saveSettings();
         }));
-        new import_obsidian.Setting(ribbonFormattingContainer).setName("Author Name CSS").setDesc("CSS for the author name.").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalAuthorCSS).onChange(async (value) => {
+        new import_obsidian.Setting(ribbonFormattingContainer).setName("Author Name CSS").setDesc("CSS for the author name. Default is:\ntext-align: left; font-size: 35px; color: var(--color-red); padding-left: 10px;").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalAuthorCSS).onChange(async (value) => {
           this.plugin.settings.ribbonModalAuthorCSS = value;
           await this.plugin.saveSettings();
         }));
-        new import_obsidian.Setting(ribbonFormattingContainer).setName("File Name CSS").setDesc("CSS for the file name.").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalFileNameCSS).onChange(async (value) => {
+        new import_obsidian.Setting(ribbonFormattingContainer).setName("File Name CSS").setDesc("CSS for the file name. Default is:\ntext-align: left; font-size: 25px; color: var(--text-normal);").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalFileNameCSS).onChange(async (value) => {
           this.plugin.settings.ribbonModalFileNameCSS = value;
           await this.plugin.saveSettings();
         }));
-        new import_obsidian.Setting(ribbonFormattingContainer).setName("File Path CSS").setDesc("CSS for the file path.").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalFilePathCSS).onChange(async (value) => {
+        new import_obsidian.Setting(ribbonFormattingContainer).setName("File Path CSS").setDesc("CSS for the file path. Default is:\ntext-align: left; font-size: 15px; color: var(--text-muted);").addTextArea((text) => text.setValue(this.plugin.settings.ribbonModalFilePathCSS).onChange(async (value) => {
           this.plugin.settings.ribbonModalFilePathCSS = value;
           await this.plugin.saveSettings();
         }));
@@ -9432,6 +9444,30 @@ var gitCollab = class extends import_obsidian3.Plugin {
     if (this.settings.status == true) {
       statusBarItemEl.setText("Loading Git-Collab...");
     }
+    if (this.settings.token == "" || this.settings.gitHubUrl == "") {
+      statusBarItemEl.setText(this.settings.settingsNotSetStatus);
+      statusBarItemEl.ariaLabel = this.settings.settingsNotSetLabel;
+      new import_obsidian3.Notice("Please set the settings for Git-Collab");
+      return;
+    }
+    if (this.settings.owner == "" || this.settings.repo == "") {
+      const regex2 = new RegExp(/^(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+/);
+      if (regex2.test(this.settings.gitHubUrl)) {
+        const url = this.settings.gitHubUrl.split("/");
+        this.settings.owner = url[url.length - 2];
+        this.settings.repo = url[url.length - 1];
+        if (this.settings.repo.includes(".git")) {
+          this.settings.repo = this.settings.repo.replace(".git", "");
+        }
+        if (this.settings.debugMode && this.settings.commitDebugLogger) {
+          console.log(`Git Collab: Owner: ${this.settings.owner} Repo: ${this.settings.repo}`);
+        }
+        this.saveSettings();
+      } else {
+        new import_obsidian3.Notice("Please enter a valid GitHub URL");
+        return;
+      }
+    }
     const octokit = new Octokit({
       auth: this.settings.token
     });
@@ -9440,11 +9476,6 @@ var gitCollab = class extends import_obsidian3.Plugin {
         const commitModal = new CommitsModal(this.app, octokit, this.settings);
         commitModal.open();
       });
-    }
-    if (this.settings.token == "" || this.settings.owner == "" || this.settings.repo == "") {
-      statusBarItemEl.setText(this.settings.settingsNotSetStatus);
-      statusBarItemEl.ariaLabel = this.settings.settingsNotSetLabel;
-      return;
     }
     if (this.settings.status) {
       statusBarItemEl.setText(this.settings.noCommitsFoundStatus);
@@ -9512,78 +9543,40 @@ var gitCollab = class extends import_obsidian3.Plugin {
   }
   async loadSettings() {
     const DEFAULT_SETTINGS = {
-      checkInterval: 15,
-      checkTime: 2,
+      username: "",
       token: "",
+      gitHubUrl: "",
       owner: "",
       repo: "",
-      notice: false,
-      noticePrompt: "This file is being edited by $author",
-      noticePromptCSS: "text-align: center; font-size: 30px; color: var(--color-red);",
-      status: false,
-      username: "",
-      fileOwners: false,
-      nameOwners: "",
-      debugMode: false,
-      cronDebugLogger: false,
-      commitDebugLogger: false,
+      checkInterval: 15,
+      checkTime: 2,
       allFormatting: false,
+      notice: true,
+      noticePrompt: "This file is being edited by $author",
+      status: true,
       settingsNotSetStatus: "\u2716",
       settingsNotSetLabel: "Settings have not been set.",
       noCommitsFoundStatus: "\u2714",
       noCommitsFoundLabel: "No commits found enjoy writing notes!",
       fileEditableStatus: "\u2714",
       fileNotEditableStatus: "\u2716",
-      ribbonModalTitleCSS: "text-align: center; font-size: 50px; color: var(--color-green);",
+      debugMode: false,
+      cronDebugLogger: false,
+      commitDebugLogger: false,
+      ribbon: true,
+      ribbonCheckInterval: 15,
+      ribbonModalTitleCSS: "text-align: center; font-size: 50px; color: var(--color-green); padding-bottom: 10px;",
       ribbonModalFetchingCommitsCSS: "text-align: left; font-size: 20px; color: var(--color-blue);",
       ribbonModalNoCommitsCSS: "text-align: center; font-size: 30px; color: var(--color-red);",
       ribbonModalNoCommitsText: "No Commits Found",
-      ribbonModalAuthorCSS: "text-align: left; font-size: 30px; color: var(--color-red);",
-      ribbonModalFileNameCSS: "text-align: left; font-size: 20px; color: var(--text-muted);",
-      ribbonModalFilePathCSS: "text-align: left; font-size: 10px; color: var(--text-muted);",
-      ribbon: true,
-      ribbonCheckInterval: 15
+      ribbonModalAuthorCSS: "text-align: left; font-size: 35px; color: var(--color-red);  padding-left: 20px;",
+      ribbonModalFileNameCSS: "text-align: left; font-size: 25px; color: var(--text-normal);",
+      ribbonModalFilePathCSS: "text-align: left; font-size: 15px; color: var(--text-muted);"
     };
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
   async saveSettings() {
     await this.saveData(this.settings);
-  }
-  async getCommits(octokit) {
-    const time_rn = new Date();
-    const time_bf = new Date(time_rn.getTime() - this.settings.checkTime * 6e4);
-    if (this.settings.debugMode && this.settings.cronDebugLogger) {
-      console.log(`Git Collab: Time Range: ${time_bf} - ${time_rn}`);
-    }
-    const response = await octokit.request("GET /repos/{owner}/{repo}/commits{?since,until,per_page,page}", {
-      owner: this.settings.owner,
-      repo: this.settings.repo,
-      since: time_bf.toISOString(),
-      until: time_rn.toISOString(),
-      per_page: 100,
-      page: 1
-    });
-    let sha = [];
-    for (let i2 = 0; i2 < response.data.length; i2++) {
-      sha.push(response.data[i2].sha);
-    }
-    let commits = [];
-    for (let i2 = 0; i2 < sha.length; i2++) {
-      const response2 = await octokit.request("GET /repos/{owner}/{repo}/commits/{sha}", {
-        owner: this.settings.owner,
-        repo: this.settings.repo,
-        ref: "main",
-        sha: sha[i2]
-      });
-      if (response2.data.commit.message.includes("vault backup")) {
-        commits.push(response2.data);
-        if (this.settings.commitDebugLogger) {
-          console.log(`Git Collab: Commit added 
-${response2.data.commit.message}`);
-        }
-      }
-    }
-    return commits;
   }
 };
 /*!
