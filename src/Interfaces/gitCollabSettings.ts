@@ -1,16 +1,18 @@
 export interface gitCollabSettings {
 
+    username: string;
     token: string;
-    owner: string;
-    repo: string;
+
+    gitHubUrl: string;
     checkInterval: number;
     checkTime: number;
+    owner: string;
+    repo: string;
 
     notice: boolean;
+    noticePrompt: string;
+
     status: boolean;
-    username: string;
-    fileOwners: boolean;
-    nameOwners: string;
 
     debugMode: boolean;
     cronDebugLogger: boolean;
@@ -21,7 +23,16 @@ export interface gitCollabSettings {
     settingsNotSetLabel: string;
     noCommitsFoundStatus: string;
     noCommitsFoundLabel: string;
-    noticePrompt: string;
     fileEditableStatus: string;
     fileNotEditableStatus: string;
+
+    ribbon: boolean;
+    ribbonCheckInterval: number;
+    ribbonModalTitleCSS: string;
+    ribbonModalFetchingCommitsCSS: string;
+    ribbonModalNoCommitsCSS: string;
+    ribbonModalNoCommitsText: string;
+    ribbonModalAuthorCSS: string;
+    ribbonModalFileNameCSS: string;
+    ribbonModalFilePathCSS: string;
 }
