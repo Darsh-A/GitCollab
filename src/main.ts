@@ -68,16 +68,16 @@ export default class gitCollab extends Plugin {
             auth: this.settings.token,
         });
 
-        if (this.settings.ribbon == true) {
-            this.addRibbonIcon('users','Git-Collab',async() => {
-               const commitModal: Modal = new CommitsModal(this.app, octokit, this.settings);
-               commitModal.open();
-            })
-        }
-
         if (this.settings.status){
             statusBarItemEl.setText(this.settings.noCommitsFoundStatus);
             statusBarItemEl.ariaLabel = this.settings.noCommitsFoundLabel;
+        }
+
+        //Add ribbon button
+        if (this.settings.ribbon){
+            this.addRibbonIcon('git-collab', 'Git-Collab', () => {
+                new CommitsModal(this.app, octokit, this.settings).open();
+            });
         }
 
         //Cron Job
@@ -203,5 +203,5 @@ export default class gitCollab extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
     }
-    
+
 }

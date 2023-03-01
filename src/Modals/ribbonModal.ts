@@ -18,7 +18,11 @@ export class CommitsModal extends Modal {
     let { contentEl, titleEl } = this;
 
     titleEl.createEl("div", { text: "Git-Collab", attr: { style: this.settings.ribbonModalTitleCSS } });
-    contentEl.createEl("div", { text: "Fetching commits....", attr: { style: this.settings.ribbonModalFetchingCommitsCSS } });
+    contentEl.createEl("div", { text: `Fetching commits in the past ${this.settings.ribbonCheckInterval} minutes.`, attr: { style: this.settings.ribbonModalFetchingCommitsCSS } });
+
+    if (this.settings.ribbonCheckInterval > 60) {
+      contentEl.createEl("div", { text: `This may take a while....`, attr: { style: this.settings.ribbonModalFetchingCommitsCSS } });
+    }
 
     const editorMap = await this.convertToEditorMap();
     contentEl.empty();
