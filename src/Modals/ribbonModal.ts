@@ -2,6 +2,7 @@ import { App, Modal} from "obsidian";
 import { Octokit } from "octokit";
 import { fetchCommits } from "src/gitFunctions";
 import { gitCollabSettings } from "src/Interfaces/gitCollabSettings";
+import { fileURLToPath } from "url";
 
 export class CommitsModal extends Modal {
   Octokit: Octokit;
@@ -15,7 +16,7 @@ export class CommitsModal extends Modal {
 
   async onOpen() {
 
-    let { contentEl, titleEl } = this;
+    const { contentEl, titleEl } = this;
 
     titleEl.createEl("div", { text: "Git-Collab", attr: { style: this.settings.ribbonModalTitleCSS } });
     contentEl.createEl("div", { text: `Fetching commits in the past ${this.settings.ribbonCheckInterval} minutes.`, attr: { style: this.settings.ribbonModalFetchingCommitsCSS } });
@@ -32,35 +33,44 @@ export class CommitsModal extends Modal {
       return;
     }
 
-    for (var [key, value] of editorMap.entries()) {
-        
-        const authorEl = contentEl.createEl("strong", { text: key, attr: { style: this.settings.ribbonModalAuthorCSS } });
+    for (const [key, value] of editorMap.entries()) {
+
+      const authorEl = contentEl.createEl("a", { text: key, attr: { href: value[0].get('authorGitHub'), style: this.settings.ribbonModalAuthorCSS } });
+      const authorWorks = contentEl.createEl("div");
   
-        for (var i = 0; i < value.length; i++) {
-        const file =authorEl.createEl("ol", { text: value[i].get('fileName'), attr: { style: this.settings.ribbonModalFileNameCSS } });
-        file.createEl("nav", { text: value[i].get('filePath'), attr: { style: this.settings.ribbonModalFilePathCSS } });
+      for (let i = 0; i < value.length; i++) {
+        const contentDiv = authorWorks.createEl("div");
+        contentDiv.createEl("a", { text: `• ${value[i].get('fileName')}`, attr: { href: value[i].get('commitUrl'), style: this.settings.ribbonModalFileNameCSS } });
+        if (this.settings.ribbonDisplayPath){
+          contentDiv.createEl("small", { text: value[i].get('filePath'), attr: { style: this.settings.ribbonModalFilePathCSS } });
         }
+      }
     }
   }
 
   private async convertToEditorMap() {
 
     const fileMap = await fetchCommits(this.Octokit, this.settings, this.settings.ribbonCheckInterval);
-    const authors: string[] = Array.from(new Set(Object.values(fileMap)));
+    const authors: string[] = new Array(...new Set(Object.values(fileMap).map((item: any) => item.authorName)));
 
     const editorMap = new Map();
-    authors.forEach( author=> {
+    authors.forEach( author => {
       editorMap.set(author, []);
     });
 
-    for (var i = 0; i < authors.length; i++) {
-      for (var [key, value] of Object.entries(fileMap)) {
-        if (value == authors[i]) {
+    for (let i = 0; i < authors.length; i++) {
+      for (const [key, value] of Object.entries(fileMap)) {
+        if (value.authorName == authors[i]) {
 
           const detailsMap = new Map();
           detailsMap.set('filePath', key);
-          detailsMap.set('fileName', key.split('/').pop()?.split('.')[0]);
+          detailsMap.set('fileName', key.split('/').pop());
+          detailsMap.set('authorName', value.authorName);
+          detailsMap.set('authorGitHub', value.authorGitHub);
+          detailsMap.set('commitMessage', value.commitMessage);
+          detailsMap.set('commitUrl', value.commitUrl);
           editorMap.get(authors[i]).push(detailsMap);
+
         }
       }
     }
@@ -69,7 +79,7 @@ export class CommitsModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }

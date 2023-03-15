@@ -75,7 +75,7 @@ export default class gitCollab extends Plugin {
 
         //Add ribbon button
         if (this.settings.ribbon){
-            this.addRibbonIcon('git-collab', 'Git-Collab', () => {
+            this.addRibbonIcon('users', 'Git-Collab', () => {
                 new CommitsModal(this.app, octokit, this.settings).open();
             });
         }
@@ -101,8 +101,9 @@ export default class gitCollab extends Plugin {
             }
 
             const filenames: string[] = [];
-            for (const [filePath, author] of Object.entries(fileMap)) {
+            for (const [filePath, commitData] of Object.entries(fileMap)) {
                 const fName = filePath.split('/').pop();
+                const author = commitData.authorName;
                 filenames.push(`${fName}: ${author}`);
             }
 
@@ -117,7 +118,7 @@ export default class gitCollab extends Plugin {
                     return;
                 }
 
-                const author = fileMap[activeFile.path];
+                const author = fileMap.get(activeFile.path)?.authorName;
                 const vaultOwner = this.settings.username;
 
                 if (this.settings.notice) {
@@ -138,12 +139,10 @@ export default class gitCollab extends Plugin {
 
                 if (this.settings.status) {
                     if (author && author != vaultOwner) {
-                        console.log('Git Collab: File not editable');
                         statusBarItemEl.setText(this.settings.fileNotEditableStatus);
                         statusBarItemEl.ariaLabel = filenames.join('\n')
                     }
                     else {
-                        console.log('Git Collab: File is editable');
                         statusBarItemEl.setText(this.settings.fileEditableStatus);
                         statusBarItemEl.ariaLabel = filenames.join('\n')
                     }
@@ -188,6 +187,7 @@ export default class gitCollab extends Plugin {
 
             ribbon: true,
             ribbonCheckInterval: 15,
+            ribbonDisplayPath: false,
             ribbonModalTitleCSS: "text-align: center; font-size: 50px; color: var(--color-green); padding-bottom: 10px;",
             ribbonModalFetchingCommitsCSS: "text-align: left; font-size: 20px; color: var(--color-blue);",
             ribbonModalNoCommitsCSS: "text-align: center; font-size: 30px; color: var(--color-red);",

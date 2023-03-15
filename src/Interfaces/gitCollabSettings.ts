@@ -28,6 +28,7 @@ export interface gitCollabSettings {
 
     ribbon: boolean;
     ribbonCheckInterval: number;
+    ribbonDisplayPath: boolean;
     ribbonModalTitleCSS: string;
     ribbonModalFetchingCommitsCSS: string;
     ribbonModalNoCommitsCSS: string;

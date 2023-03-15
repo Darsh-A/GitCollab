@@ -262,6 +262,17 @@ export class gitCollabSettingTab extends PluginSettingTab {
                     })
             );
 
+            new Setting(ribbonContainer)
+                .setName('Display File Path In Modal')
+                .setDesc('Show file path along with name in the modal.')
+                .addToggle(toggle => toggle
+                    .setValue(this.plugin.settings.ribbonDisplayPath)
+                    .onChange(async (value) => {
+                        this.plugin.settings.ribbonDisplayPath = value;
+                        await this.plugin.saveSettings();
+                    })
+                );
+
             if (this.plugin.settings.allFormatting == true) {
 
                 const ribbonFormattingContainer = ribbonContainer.createDiv();

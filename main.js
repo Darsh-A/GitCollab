@@ -9291,6 +9291,10 @@ var gitCollabSettingTab = class extends import_obsidian.PluginSettingTab {
         this.plugin.settings.ribbonCheckInterval = parseInt(value);
         await this.plugin.saveSettings();
       }));
+      new import_obsidian.Setting(ribbonContainer).setName("Display File Path In Modal").setDesc("Show file path along with name in the modal.").addToggle((toggle) => toggle.setValue(this.plugin.settings.ribbonDisplayPath).onChange(async (value) => {
+        this.plugin.settings.ribbonDisplayPath = value;
+        await this.plugin.saveSettings();
+      }));
       if (this.plugin.settings.allFormatting == true) {
         const ribbonFormattingContainer = ribbonContainer.createDiv();
         ribbonFormattingContainer.createEl("h3", { text: "Ribbon Modal Formatting" });
@@ -9352,11 +9356,11 @@ async function fetchCommits(octokit, settings, timeInterval) {
     per_page: 100,
     page: 1
   });
-  let sha = [];
+  const sha = [];
   for (let i2 = 0; i2 < response.data.length; i2++) {
     sha.push(response.data[i2].sha);
   }
-  let commits = [];
+  const commits = [];
   for (let i2 = 0; i2 < sha.length; i2++) {
     const response2 = await octokit.request("GET /repos/{owner}/{repo}/commits/{sha}", {
       owner: settings.owner,
@@ -9368,14 +9372,19 @@ async function fetchCommits(octokit, settings, timeInterval) {
       commits.push(response2.data);
     }
   }
-  let filenames = [];
-  let files = [];
-  let fileMap = {};
+  const filenames = [];
+  const files = [];
+  const fileMap = {};
   for (let i2 = 0; i2 < commits.length; i2++) {
     for (let j = 0; j < commits[i2].files.length; j++) {
       filenames.indexOf(`${commits[i2].commit.author.name} - ${commits[i2].files[j].filename}`) == -1 ? filenames.push(`${commits[i2].commit.author.name} - ${commits[i2].files[j].filename}`) : null;
       files.indexOf(commits[i2].files[j].filename) == -1 ? files.push(commits[i2].files[j].filename) : null;
-      fileMap[commits[i2].files[j].filename] = commits[i2].commit.author.name;
+      const data = {
+        authorName: commits[i2].author.login,
+        authorGitHub: commits[i2].author.html_url,
+        commitUrl: commits[i2].html_url
+      };
+      fileMap[commits[i2].files[j].filename] = data;
     }
   }
   return fileMap;
@@ -9390,37 +9399,47 @@ var CommitsModal = class extends import_obsidian2.Modal {
     this.settings = settings;
   }
   async onOpen() {
-    let { contentEl, titleEl } = this;
+    const { contentEl, titleEl } = this;
     titleEl.createEl("div", { text: "Git-Collab", attr: { style: this.settings.ribbonModalTitleCSS } });
-    contentEl.createEl("div", { text: "Fetching commits....", attr: { style: this.settings.ribbonModalFetchingCommitsCSS } });
+    contentEl.createEl("div", { text: `Fetching commits in the past ${this.settings.ribbonCheckInterval} minutes.`, attr: { style: this.settings.ribbonModalFetchingCommitsCSS } });
+    if (this.settings.ribbonCheckInterval > 60) {
+      contentEl.createEl("div", { text: `This may take a while....`, attr: { style: this.settings.ribbonModalFetchingCommitsCSS } });
+    }
     const editorMap = await this.convertToEditorMap();
     contentEl.empty();
     if (editorMap.size == 0) {
       contentEl.createEl("div", { text: this.settings.ribbonModalNoCommitsText, attr: { style: this.settings.ribbonModalNoCommitsCSS } });
       return;
     }
-    for (var [key, value] of editorMap.entries()) {
-      const authorEl = contentEl.createEl("strong", { text: key, attr: { style: this.settings.ribbonModalAuthorCSS } });
-      for (var i2 = 0; i2 < value.length; i2++) {
-        const file = authorEl.createEl("ol", { text: value[i2].get("fileName"), attr: { style: this.settings.ribbonModalFileNameCSS } });
-        file.createEl("nav", { text: value[i2].get("filePath"), attr: { style: this.settings.ribbonModalFilePathCSS } });
+    for (const [key, value] of editorMap.entries()) {
+      const authorEl = contentEl.createEl("a", { text: key, attr: { href: value[0].get("authorGitHub"), style: this.settings.ribbonModalAuthorCSS } });
+      const authorWorks = contentEl.createEl("div");
+      for (let i2 = 0; i2 < value.length; i2++) {
+        const contentDiv = authorWorks.createEl("div");
+        contentDiv.createEl("a", { text: `\u2022 ${value[i2].get("fileName")}`, attr: { href: value[i2].get("commitUrl"), style: this.settings.ribbonModalFileNameCSS } });
+        if (this.settings.ribbonDisplayPath) {
+          contentDiv.createEl("small", { text: value[i2].get("filePath"), attr: { style: this.settings.ribbonModalFilePathCSS } });
+        }
       }
     }
   }
   async convertToEditorMap() {
-    var _a;
     const fileMap = await fetchCommits(this.Octokit, this.settings, this.settings.ribbonCheckInterval);
-    const authors = Array.from(new Set(Object.values(fileMap)));
+    const authors = new Array(...new Set(Object.values(fileMap).map((item) => item.authorName)));
     const editorMap = /* @__PURE__ */ new Map();
     authors.forEach((author) => {
       editorMap.set(author, []);
     });
-    for (var i2 = 0; i2 < authors.length; i2++) {
-      for (var [key, value] of Object.entries(fileMap)) {
-        if (value == authors[i2]) {
+    for (let i2 = 0; i2 < authors.length; i2++) {
+      for (const [key, value] of Object.entries(fileMap)) {
+        if (value.authorName == authors[i2]) {
           const detailsMap = /* @__PURE__ */ new Map();
           detailsMap.set("filePath", key);
-          detailsMap.set("fileName", (_a = key.split("/").pop()) == null ? void 0 : _a.split(".")[0]);
+          detailsMap.set("fileName", key.split("/").pop());
+          detailsMap.set("authorName", value.authorName);
+          detailsMap.set("authorGitHub", value.authorGitHub);
+          detailsMap.set("commitMessage", value.commitMessage);
+          detailsMap.set("commitUrl", value.commitUrl);
           editorMap.get(authors[i2]).push(detailsMap);
         }
       }
@@ -9428,7 +9447,7 @@ var CommitsModal = class extends import_obsidian2.Modal {
     return editorMap;
   }
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 };
@@ -9471,18 +9490,18 @@ var gitCollab = class extends import_obsidian3.Plugin {
     const octokit = new Octokit({
       auth: this.settings.token
     });
-    if (this.settings.ribbon == true) {
-      this.addRibbonIcon("users", "Git-Collab", async () => {
-        const commitModal = new CommitsModal(this.app, octokit, this.settings);
-        commitModal.open();
-      });
-    }
     if (this.settings.status) {
       statusBarItemEl.setText(this.settings.noCommitsFoundStatus);
       statusBarItemEl.ariaLabel = this.settings.noCommitsFoundLabel;
     }
+    if (this.settings.ribbon) {
+      this.addRibbonIcon("users", "Git-Collab", () => {
+        new CommitsModal(this.app, octokit, this.settings).open();
+      });
+    }
     const cronJob = `*/${this.settings.checkInterval} * * * * *`;
     cron.schedule(cronJob, async () => {
+      var _a;
       if (this.settings.debugMode && this.settings.cronDebugLogger) {
         console.log(`Git Collab: Cron task started with a timer of ${this.settings.checkInterval}`);
       }
@@ -9496,8 +9515,9 @@ var gitCollab = class extends import_obsidian3.Plugin {
         console.log(`Git Collab: Commits fetched`);
       }
       const filenames = [];
-      for (const [filePath, author] of Object.entries(fileMap)) {
+      for (const [filePath, commitData] of Object.entries(fileMap)) {
         const fName = filePath.split("/").pop();
+        const author = commitData.authorName;
         filenames.push(`${fName}: ${author}`);
       }
       console.log(`Git Collab FileNames: ${filenames}`);
@@ -9508,7 +9528,7 @@ var gitCollab = class extends import_obsidian3.Plugin {
           statusBarItemEl.ariaLabel = "Please open a file gor status bar to work";
           return;
         }
-        const author = fileMap[activeFile.path];
+        const author = (_a = fileMap.get(activeFile.path)) == null ? void 0 : _a.authorName;
         const vaultOwner = this.settings.username;
         if (this.settings.notice) {
           if (author && author != vaultOwner) {
@@ -9526,11 +9546,9 @@ var gitCollab = class extends import_obsidian3.Plugin {
         }
         if (this.settings.status) {
           if (author && author != vaultOwner) {
-            console.log("Git Collab: File not editable");
             statusBarItemEl.setText(this.settings.fileNotEditableStatus);
             statusBarItemEl.ariaLabel = filenames.join("\n");
           } else {
-            console.log("Git Collab: File is editable");
             statusBarItemEl.setText(this.settings.fileEditableStatus);
             statusBarItemEl.ariaLabel = filenames.join("\n");
           }
@@ -9565,6 +9583,7 @@ var gitCollab = class extends import_obsidian3.Plugin {
       commitDebugLogger: false,
       ribbon: true,
       ribbonCheckInterval: 15,
+      ribbonDisplayPath: false,
       ribbonModalTitleCSS: "text-align: center; font-size: 50px; color: var(--color-green); padding-bottom: 10px;",
       ribbonModalFetchingCommitsCSS: "text-align: left; font-size: 20px; color: var(--color-blue);",
       ribbonModalNoCommitsCSS: "text-align: center; font-size: 30px; color: var(--color-red);",
